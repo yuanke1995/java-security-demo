@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XSS漏洞演示</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .warning-banner {
+            background: #ff6b6b;
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            text-align: center;
+            font-weight: bold;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .demo-sections {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 968px) {
+            .demo-sections {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .section {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .section.vulnerable {
+            border: 4px solid #ff6b6b;
+        }
+
+        .section.safe {
+            border: 4px solid #51cf66;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .section-icon {
+            font-size: 2em;
+            margin-right: 15px;
+        }
+
+        .section-title {
+            font-size: 1.8em;
+            font-weight: bold;
+        }
+
+        .vulnerable .section-title {
+            color: #ff6b6b;
+        }
+
+        .safe .section-title {
+            color: #51cf66;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #495057;
+        }
+
+        .input-group textarea {
+            width: 100%;
+            min-height: 100px;
+            padding: 12px;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            font-size: 14px;
+            resize: vertical;
+            transition: border-color 0.3s;
+        }
+
+        .input-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .preset-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .preset-btn {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.3s;
+            background: #e9ecef;
+            color: #495057;
+        }
+
+        .preset-btn:hover {
+            background: #667eea;
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: white;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .vulnerable .submit-btn {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+            border: 2px solid #ff6b6b;
+        }
+
+        .safe .submit-btn {
+            background: linear-gradient(135deg, #51cf66 0%, #40c057 100%);
+            border: 2px solid #51cf66;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+        }
+
+        .vulnerable .submit-btn:hover {
+            background: linear-gradient(135deg, #ff5252 0%, #e03e52 100%);
+            border-color: #ff5252;
+        }
+
+        .safe .submit-btn:hover {
+            background: linear-gradient(135deg, #40c057 0%, #37b24d 100%);
+            border-color: #40c057;
+        }
+
+        .submit-btn:active {
+            transform: translateY(-1px);
+        }
+
+        .comments-area {
+            margin-top: 25px;
+            padding-top: 20px;
+            border-top: 2px solid #e9ecef;
+        }
+
+        .comments-title {
+            font-size: 1.3em;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #495057;
+        }
+
+        .comment-item {
+            background: #f8f9fa;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .comment-time {
+            font-size: 12px;
+            color: #868e96;
+            margin-bottom: 5px;
+        }
+
+        .info-box {
+            background: #e7f5ff;
+            border-left: 4px solid #339af0;
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 5px;
+        }
+
+        .info-box h3 {
+            color: #1971c2;
+            margin-bottom: 10px;
+        }
+
+        .info-box ul {
+            margin-left: 20px;
+            color: #495057;
+        }
+
+        .info-box li {
+            margin-bottom: 5px;
+        }
+
+        .message {
+            background: #d3f9d8;
+            color: #2b8a3e;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .clear-btn {
+            background: #868e96;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: all 0.3s;
+        }
+
+        .clear-btn:hover {
+            background: #495057;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔒 XSS漏洞交互式演示</h1>
+
+        <div class="warning-banner">
+            ⚠️ 警告：这是一个安全演示页面，请勿在生产环境中使用危险区域的代码！
+        </div>
+
+        <div th:if="${message}" class="message">
+            <span th:text="${message}"></span>
+        </div>
+
+        <div class="demo-sections">
+            <!-- 危险区域 -->
+            <div class="section vulnerable">
+                <div class="section-header">
+                    <div class="section-icon">☠️</div>
+                    <div class="section-title">危险区域（未防护）</div>
+                </div>
+
+                <form action="/comment/vulnerable" method="POST">
+                    <div class="input-group">
+                        <label for="vulnerable-content">输入评论内容：</label>
+                        <textarea
+                            id="vulnerable-content"
+                            name="content"
+                            placeholder="在这里输入评论内容，尝试XSS攻击..."></textarea>
+                    </div>
+
+                    <div class="preset-buttons">
+                        <button type="button" class="preset-btn" onclick="setPreset('vulnerable', '<script>alert(\'XSS攻击成功！\')</script>')">
+                            🚨 基础弹窗
+                        </button>
+                        <button type="button" class="preset-btn" onclick="setPreset('vulnerable', '<img src=x onerror=alert(\'图片XSS攻击\')>')">
+                            🖼️ 图片错误
+                        </button>
+                        <button type="button" class="preset-btn" onclick="setPreset('vulnerable', '<div style=&quot;background:red;width:100px;height:100px&quot; onclick=&quot;alert(\&quot;点击攻击\&quot;)&quot;>点击我</div>')">
+                            🎨 CSS注入
+                        </button>
+                        <button type="button" class="preset-btn" onclick="setPreset('vulnerable', '&lt;iframe src=&quot;javascript:alert(\&quot;iframe XSS\&quot;)&quot;&gt;&lt;/iframe&gt;')">
+                            📄 iframe注入
+                        </button>
+                    </div>
+
+                    <button type="submit" class="submit-btn">提交评论（危险）</button>
+                </form>
+
+                <div class="comments-area">
+                    <div class="comments-title">📋 评论列表（<span th:text="${#lists.size(vulnerableComments)}"></span>条）</div>
+                    <div th:each="comment : ${vulnerableComments}" class="comment-item" th:utext="${comment}">
+                    </div>
+                    <button class="clear-btn" onclick="location.reload()">清空评论</button>
+                </div>
+
+                <div class="info-box">
+                    <h3>⚠️ 这个区域为什么危险？</h3>
+                    <ul>
+                        <li>直接输出用户输入，没有任何转义</li>
+                        <li>恶意脚本会被浏览器执行</li>
+                        <li>可以窃取Cookie、会话信息</li>
+                        <li>可以进行钓鱼攻击</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- 安全区域 -->
+            <div class="section safe">
+                <div class="section-header">
+                    <div class="section-icon">✅</div>
+                    <div class="section-title">安全区域（已防护）</div>
+                </div>
+
+                <form action="/comment/safe" method="POST">
+                    <div class="input-group">
+                        <label for="safe-content">输入评论内容：</label>
+                        <textarea
+                            id="safe-content"
+                            name="content"
+                            placeholder="在这里输入评论内容，即使是XSS攻击也会被转义..."></textarea>
+                    </div>
+
+                    <div class="preset-buttons">
+                        <button type="button" class="preset-btn" onclick="setPreset('safe', '<script>alert(\'XSS攻击成功！\')</script>')">
+                            🚨 基础弹窗
+                        </button>
+                        <button type="button" class="preset-btn" onclick="setPreset('safe', '<img src=x onerror=alert(\'图片XSS攻击\')>')">
+                            🖼️ 图片错误
+                        </button>
+                        <button type="button" class="preset-btn" onclick="setPreset('safe', '<div style=&quot;background:red;width:100px;height:100px&quot; onclick=&quot;alert(\&quot;点击攻击\&quot;)&quot;>点击我</div>')">
+                            🎨 CSS注入
+                        </button>
+                        <button type="button" class="preset-btn" onclick="setPreset('safe', '&lt;iframe src=&quot;javascript:alert(\&quot;iframe XSS\&quot;)&quot;&gt;&lt;/iframe&gt;')">
+                            📄 iframe注入
+                        </button>
+                    </div>
+
+                    <button type="submit" class="submit-btn">提交评论（安全）</button>
+                </form>
+
+                <div class="comments-area">
+                    <div class="comments-title">📋 评论列表（<span th:text="${#lists.size(safeComments)}"></span>条）</div>
+                    <div th:each="comment : ${safeComments}" class="comment-item">
+                        <div th:utext="${comment}"></div>
+                    </div>
+                    <button class="clear-btn" onclick="location.reload()">清空评论</button>
+                </div>
+
+                <div class="info-box">
+                    <h3>✅ 这个区域如何防护？</h3>
+                    <ul>
+                        <li>使用HtmlUtils.htmlEscape()转义特殊字符</li>
+                        <li>&lt; 转义为 &amp;lt;，&gt; 转义为 &amp;gt;</li>
+                        <li>恶意脚本被当作普通文本显示</li>
+                        <li>无法执行任何JavaScript代码</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        F<div style="text-align: center; margin-top: 30px;">
+            <form action="/comment/clear" method="POST" style="display: inline-block;">
+                <button type="submit" class="clear-btn" style="padding: 15px 40px; font-size: 16px;">
+                    🗑️ 清空所有评论
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function setPreset(area, content) {
+            const textarea = document.getElementById(area + '-content');
+            textarea.value = content;
+            textarea.focus();
+        }
+
+        // 自动滚动到最新消息
+        window.addEventListener('load', function() {
+            const commentsArea = document.querySelector('.comments-area');
+            if (commentsArea) {
+                commentsArea.scrollIntoView({ behavior: 'smooth' });
+            }
+        });
+    </script>
+</body>
+</html>

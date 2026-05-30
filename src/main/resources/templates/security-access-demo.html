@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spring Security防护未授权/越权访问演示</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .warning-banner {
+            background: #51cf66;
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            text-align: center;
+            font-weight: bold;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .login-section {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            text-align: center;
+        }
+
+        .login-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+
+        .login-btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.3s;
+            color: white;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .login-btn.user {
+            background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);
+        }
+
+        .login-btn.admin {
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+        }
+
+        .login-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+        }
+
+        .logout-btn {
+            background: linear-gradient(135deg, #868e96 0%, #495057 100%);
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            margin-left: 15px;
+        }
+
+        .demo-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 768px) {
+            .demo-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .demo-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            border: 4px solid #51cf66;
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .card-icon {
+            font-size: 2.5em;
+            margin-right: 15px;
+        }
+
+        .card-title {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #51cf66;
+        }
+
+        .action-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .action-btn {
+            padding: 10px 20px;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+            background: white;
+            color: #495057;
+        }
+
+        .action-btn:hover {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+            transform: translateY(-2px);
+        }
+
+        .action-btn.primary {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .action-btn.danger {
+            background: #fff5f5;
+            border-color: #ff6b6b;
+            color: #ff6b6b;
+        }
+
+        .result-area {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            min-height: 150px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            border: 2px solid #e9ecef;
+        }
+
+        .result-area pre {
+            margin: 0;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .info-box {
+            background: #e7f5ff;
+            border-left: 4px solid #339af0;
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 5px;
+        }
+
+        .info-box h3 {
+            color: #1971c2;
+            margin-bottom: 10px;
+        }
+
+        .info-box ul {
+            margin-left: 20px;
+            color: #495057;
+        }
+
+        .info-box li {
+            margin-bottom: 5px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        .status-badge.logged-in {
+            background: #d3f9d8;
+            color: #2b8a3e;
+        }
+
+        .status-badge.not-logged-in {
+            background: #ffe3e3;
+            color: #c92a2a;
+        }
+
+        .user-info {
+            background: #fff9db;
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin-top: 10px;
+            display: inline-block;
+        }
+
+        .security-badge {
+            display: inline-block;
+            background: #d3f9d8;
+            color: #2b8a3e;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🛡️ Spring Security防护未授权/越权访问演示</h1>
+
+        <div class="warning-banner">
+            ✅ 此演示展示了如何使用Spring Security正确防护未授权访问和越权访问漏洞
+        </div>
+
+        <!-- 登录区域 -->
+        <div class="login-section">
+            <h2 style="margin-bottom: 15px; color: #495057;">👤 用户登录（使用Spring Security）</h2>
+            <p style="color: #868e96; margin-bottom: 15px;">点击下方按钮模拟不同角色用户登录，体验Spring Security的权限控制</p>
+
+            <div class="login-buttons">
+                <button class="login-btn user" onclick="loginAsUser()">登录普通用户 (张三)</button>
+                <button class="login-btn admin" onclick="loginAsAdmin()">登录管理员</button>
+                <button class="logout-btn" onclick="logout()">退出登录</button>
+            </div>
+
+            <div id="loginStatus"></div>
+        </div>
+
+        <div class="demo-grid">
+            <!-- 功能1：获取用户列表（需要ADMIN权限） -->
+            <div class="demo-card">
+                <div class="card-header">
+                    <div class="card-icon">🔐</div>
+                    <div>
+                        <div class="card-title">功能1：获取用户列表</div>
+                        <small style="color: #868e96;">需要ADMIN角色才能访问</small>
+                    </div>
+                </div>
+
+                <div class="action-buttons">
+                    <button class="action-btn primary" onclick="getAllUsers()">
+                        📋 获取所有用户列表
+                    </button>
+                </div>
+
+                <div class="result-area" id="result1">
+                    <pre>点击按钮查看结果...</pre>
+                </div>
+
+                <div class="info-box">
+                    <h3>🛡️ Spring Security防护</h3>
+                    <ul>
+                        <li><strong>权限要求：</strong>@PreAuthorize("hasRole('ADMIN')")</li>
+                        <li><strong>防护效果：</strong>普通用户访问会返回403 Forbidden</li>
+                        <li><strong>实现方式：</strong>基于角色的访问控制（RBAC）</li>
+                        <li><strong>安全级别：</strong>⭐⭐⭐⭐⭐</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- 功能2：获取个人资料（需要登录） -->
+            <div class="demo-card">
+                <div class="card-header">
+                    <div class="card-icon">👤</div>
+                    <div>
+                        <div class="card-title">功能2：获取个人资料</div>
+                        <small style="color: #868e96;">需要登录，只能查看自己的信息</small>
+                    </div>
+                </div>
+
+                <div class="action-buttons">
+                    <button class="action-btn primary" onclick="getUserProfile()">
+                        🔍 查看我的个人资料
+                    </button>
+                </div>
+
+                <div class="result-area" id="result2">
+                    <pre>点击按钮查看结果...</pre>
+                </div>
+
+                <div class="info-box">
+                    <h3>🛡️ Spring Security防护</h3>
+                    <ul>
+                        <li><strong>权限要求：</strong>@PreAuthorize("authenticated()")</li>
+                        <li><strong>防护效果：</strong>未登录用户无法访问</li>
+                        <li><strong>实现方式：</strong>从SecurityContext获取当前用户</li>
+                        <li><strong>数据安全：</strong>敏感信息自动脱敏</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- 功能3：获取订单详情（验证所有权） -->
+            <div class="demo-card">
+                <div class="card-header">
+                    <div class="card-icon">📦</div>
+                    <div>
+                        <div class="card-title">功能3：获取订单详情</div>
+                        <small style="color: #868e96;">需要登录且验证订单所有权</small>
+                    </div>
+                </div>
+
+                <div class="action-buttons">
+                    <button class="action-btn" onclick="getOrder(1001)">
+                        查看订单1001
+                    </button>
+                    <button class="action-btn" onclick="getOrder(1003)">
+                        查看订单1003
+                    </button>
+                    <button class="action-btn" onclick="getOrder(1005)">
+                        查看订单1005
+                    </button>
+                </div>
+
+                <div class="result-area" id="result3">
+                    <pre>点击按钮查看结果...</pre>
+                </div>
+
+                <div class="info-box">
+                    <h3>🛡️ Spring Security防护</h3>
+                    <ul>
+                        <li><strong>权限要求：</strong>authenticated() + 所有权验证</li>
+                        <li><strong>防护效果：</strong>防止水平越权访问他人订单</li>
+                        <li><strong>实现方式：</strong>业务逻辑层验证资源归属</li>
+                        <li><strong>安全级别：</strong>⭐⭐⭐⭐⭐</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- 功能4：删除用户（需要ADMIN权限） -->
+            <div class="demo-card">
+                <div class="card-header">
+                    <div class="card-icon">🗑️</div>
+                    <div>
+                        <div class="card-title">功能4：删除用户</div>
+                        <small style="color: #868e96;">仅ADMIN角色可执行的管理员操作</small>
+                    </div>
+                </div>
+
+                <div class="action-buttons">
+                    <button class="action-btn danger" onclick="deleteUser(1)">
+                        删除用户张三 (ID:1)
+                    </button>
+                    <button class="action-btn danger" onclick="deleteUser(2)">
+                        删除用户李四 (ID:2)
+                    </button>
+                </div>
+
+                <div class="result-area" id="result4">
+                    <pre>点击按钮查看结果...</pre>
+                </div>
+
+                <div class="info-box">
+                    <h3>🛡️ Spring Security防护</h3>
+                    <ul>
+                        <li><strong>权限要求：</strong>@PreAuthorize("hasRole('ADMIN')")</li>
+                        <li><strong>防护效果：</strong>防止垂直越权，普通用户无法删除</li>
+                        <li><strong>实现方式：</strong>方法级权限控制</li>
+                        <li><strong>安全级别：</strong>⭐⭐⭐⭐⭐</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- 功能5：查看所有订单（管理员） -->
+            <div class="demo-card">
+                <div class="card-header">
+                    <div class="card-icon">📊</div>
+                    <div>
+                        <div class="card-title">功能5：查看所有订单</div>
+                        <small style="color: #868e96;">管理员专属功能</small>
+                    </div>
+                </div>
+
+                <div class="action-buttons">
+                    <button class="action-btn primary" onclick="getAllOrders()">
+                        📊 查看所有订单
+                    </button>
+                </div>
+
+                <div class="result-area" id="result5">
+                    <pre>点击按钮查看结果...</pre>
+                </div>
+
+                <div class="info-box">
+                    <h3>🛡️ Spring Security防护</h3>
+                    <ul>
+                        <li><strong>权限要求：</strong>@PreAuthorize("hasRole('ADMIN')")</li>
+                        <li><strong>防护效果：</strong>仅管理员可查看全局数据</li>
+                        <li><strong>实现方式：</strong>URL级别权限控制</li>
+                        <li><strong>安全级别：</strong>⭐⭐⭐⭐⭐</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Spring Security特性说明 -->
+            <div class="demo-card" style="border: 4px solid #ffd43b;">
+                <div class="card-header">
+                    <div class="card-icon">🎯</div>
+                    <div>
+                        <div class="card-title" style="color: #f08c00;">Spring Security核心特性</div>
+                        <small style="color: #868e96;">如何防护未授权/越权访问</small>
+                    </div>
+                </div>
+
+                <div style="line-height: 1.8; color: #495057;">
+                    <h3 style="color: #f08c00; margin-bottom: 10px;">📋 防护机制清单</h3>
+
+                    <h4 style="margin-top: 15px; margin-bottom: 5px;">1️⃣ 身份认证（Authentication）</h4>
+                    <ul style="margin-left: 20px; margin-bottom: 10px;">
+                        <li>自动管理用户会话状态</li>
+                        <li>支持多种认证方式（表单、JWT、OAuth2等）</li>
+                        <li>SecurityContext自动维护当前用户信息</li>
+                    </ul>
+
+                    <h4 style="margin-top: 15px; margin-bottom: 5px;">2️⃣ 授权控制（Authorization）</h4>
+                    <ul style="margin-left: 20px; margin-bottom: 10px;">
+                        <li>基于角色的访问控制（RBAC）</li>
+                        <li>URL级别权限控制：hasRole()、authenticated()</li>
+                        <li>方法级权限控制：@PreAuthorize注解</li>
+                    </ul>
+
+                    <h4 style="margin-top: 15px; margin-bottom: 5px;">3️⃣ 防止水平越权</h4>
+                    <ul style="margin-left: 20px; margin-bottom: 10px;">
+                        <li>从SecurityContext获取真实用户ID</li>
+                        <li>服务端验证资源所有权</li>
+                        <li>不信任客户端传入的用户标识</li>
+                    </ul>
+
+                    <h4 style="margin-top: 15px; margin-bottom: 5px;">4️⃣ 防止垂直越权</h4>
+                    <ul style="margin-left: 20px; margin-bottom: 10px;">
+                        <li>严格区分USER和ADMIN角色</li>
+                        <li>敏感操作强制要求ADMIN权限</li>
+                        <li>默认拒绝原则，显式授权访问</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentUserId = null;
+        let currentUserRole = null;
+        let currentUsername = null;
+
+        async function loginAsUser() {
+            try {
+                const response = await fetch('/api/security/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: 'username=zhangsan'
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    currentUserId = data.userId;
+                    currentUserRole = data.role;
+                    currentUsername = data.username;
+                    updateLoginStatus(currentUsername, currentUserRole);
+                    alert(`✅ 登录成功！\n用户：${data.username}\n角色：${data.role}`);
+                } else {
+                    alert('❌ 登录失败：' + data.message);
+                }
+            } catch (error) {
+                alert('❌ 请求失败：' + error.message);
+            }
+        }
+
+        async function loginAsAdmin() {
+            try {
+                const response = await fetch('/api/security/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: 'username=admin'
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    currentUserId = data.userId;
+                    currentUserRole = data.role;
+                    currentUsername = data.username;
+                    updateLoginStatus(currentUsername, currentUserRole);
+                    alert(`✅ 登录成功！\n用户：${data.username}\n角色：${data.role}`);
+                } else {
+                    alert('❌ 登录失败：' + data.message);
+                }
+            } catch (error) {
+                alert('❌ 请求失败：' + error.message);
+            }
+        }
+
+        async function logout() {
+            try {
+                const response = await fetch('/api/security/logout', {
+                    method: 'POST'
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    currentUserId = null;
+                    currentUserRole = null;
+                    currentUsername = null;
+                    document.getElementById('loginStatus').innerHTML =
+                        '<span class="status-badge not-logged-in">❌ 未登录</span>';
+                    alert('✅ 已退出登录');
+                }
+            } catch (error) {
+                alert('❌ 请求失败：' + error.message);
+            }
+        }
+
+        function updateLoginStatus(username, role) {
+            const statusDiv = document.getElementById('loginStatus');
+            statusDiv.innerHTML = `
+                <span class="status-badge logged-in">✅ 已登录</span>
+                <div class="user-info">
+                    当前用户：<strong>${username}</strong> |
+                    角色: ${role}
+                </div>
+            `;
+        }
+
+        async function getAllUsers() {
+            try {
+                const response = await fetch('/api/security/users/list', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'same-origin'
+                });
+
+                if (response.status === 401) {
+                    displayError('result1', '❌ 401 Unauthorized：请先登录');
+                    return;
+                }
+
+                if (response.status === 403) {
+                    displayError('result1', '❌ 403 Forbidden：需要ADMIN角色才能访问\n\n当前用户不是管理员，Spring Security已阻止访问！');
+                    return;
+                }
+
+                const data = await response.json();
+                displayResult('result1', data);
+            } catch (error) {
+                displayError('result1', error.message);
+            }
+        }
+
+        async function getUserProfile() {
+            try {
+                const response = await fetch('/api/security/users/profile', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'same-origin'
+                });
+
+                if (response.status === 401) {
+                    displayError('result2', '❌ 401 Unauthorized：请先登录\n\nSpring Security要求必须认证后才能访问！');
+                    return;
+                }
+
+                const data = await response.json();
+                displayResult('result2', data);
+            } catch (error) {
+                displayError('result2', error.message);
+            }
+        }
+
+        async function getOrder(orderId) {
+            try {
+                const response = await fetch(`/api/security/orders/${orderId}`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'same-origin'
+                });
+
+                if (response.status === 401) {
+                    displayError('result3', '❌ 401 Unauthorized：请先登录');
+                    return;
+                }
+
+                const data = await response.json();
+
+                if (!data.success) {
+                    displayResult('result3', data);
+                    return;
+                }
+
+                displayResult('result3', data);
+            } catch (error) {
+                displayError('result3', error.message);
+            }
+        }
+
+        async function deleteUser(userId) {
+            if (!confirm(`⚠️ 警告：这将删除用户ID为${userId}的账号！\n\n此操作需要ADMIN权限。\n确定要继续吗？`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/security/admin/delete-user/${userId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'same-origin'
+                });
+
+                if (response.status === 401) {
+                    displayError('result4', '❌ 401 Unauthorized：请先登录');
+                    return;
+                }
+
+                if (response.status === 403) {
+                    displayError('result4', '❌ 403 Forbidden：需要ADMIN角色才能执行删除操作\n\nSpring Security已阻止非管理员用户的删除请求！');
+                    return;
+                }
+
+                const data = await response.json();
+                displayResult('result4', data);
+            } catch (error) {
+                displayError('result4', error.message);
+            }
+        }
+
+        async function getAllOrders() {
+            try {
+                const response = await fetch('/api/security/admin/orders/all', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'same-origin'
+                });
+
+                if (response.status === 401) {
+                    displayError('result5', '❌ 401 Unauthorized：请先登录');
+                    return;
+                }
+
+                if (response.status === 403) {
+                    displayError('result5', '❌ 403 Forbidden：需要ADMIN角色才能查看所有订单\n\nSpring Security已阻止非管理员用户的访问！');
+                    return;
+                }
+
+                const data = await response.json();
+                displayResult('result5', data);
+            } catch (error) {
+                displayError('result5', error.message);
+            }
+        }
+
+        function displayResult(elementId, data) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+        }
+
+        function displayError(elementId, message) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<pre style="color: #ff6b66;">${message}</pre>`;
+        }
+
+        window.addEventListener('load', function() {
+            document.getElementById('loginStatus').innerHTML =
+                '<span class="status-badge not-logged-in">❌ 未登录</span>';
+        });
+    </script>
+</body>
+</html>

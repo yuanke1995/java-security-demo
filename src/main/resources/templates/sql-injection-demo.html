@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SQL注入漏洞演示</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .warning-banner {
+            background: #ff6b6b;
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            text-align: center;
+            font-weight: bold;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .demo-sections {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 968px) {
+            .demo-sections {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .section {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .section.vulnerable {
+            border: 4px solid #ff6b6b;
+        }
+
+        .section.safe {
+            border: 4px solid #51cf66;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .section-icon {
+            font-size: 2em;
+            margin-right: 15px;
+        }
+
+        .section-title {
+            font-size: 1.8em;
+            font-weight: bold;
+        }
+
+        .vulnerable .section-title {
+            color: #ff6b6b;
+        }
+
+        .safe .section-title {
+            color: #51cf66;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #495057;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .preset-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .preset-btn {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.3s;
+            background: #e9ecef;
+            color: #495057;
+        }
+
+        .preset-btn:hover {
+            background: #667eea;
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: white;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .vulnerable .submit-btn {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+            border: 2px solid #ff6b6b;
+        }
+
+        .safe .submit-btn {
+            background: linear-gradient(135deg, #51cf66 0%, #40c057 100%);
+            border: 2px solid #51cf66;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+        }
+
+        .vulnerable .submit-btn:hover {
+            background: linear-gradient(135deg, #ff5252 0%, #e03e52 100%);
+            border-color: #ff5252;
+        }
+
+        .safe .submit-btn:hover {
+            background: linear-gradient(135deg, #40c057 0%, #37b24d 100%);
+            border-color: #40c057;
+        }
+
+        .submit-btn:active {
+            transform: translateY(-1px);
+        }
+
+        .result-area {
+            margin-top: 25px;
+            padding-top: 20px;
+            border-top: 2px solid #e9ecef;
+        }
+
+        .result-title {
+            font-size: 1.3em;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #495057;
+        }
+
+        .result-item {
+            background: #f8f9fa;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .info-box {
+            background: #e7f5ff;
+            border-left: 4px solid #339af0;
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 5px;
+        }
+
+        .info-box h3 {
+            color: #1971c2;
+            margin-bottom: 10px;
+        }
+
+        .info-box ul {
+            margin-left: 20px;
+            color: #495057;
+        }
+
+        .info-box li {
+            margin-bottom: 5px;
+        }
+
+        .message {
+            background: #d3f9d8;
+            color: #2b8a3e;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .error-message {
+            background: #ffe3e3;
+            color: #c92a2a;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .attack-demo {
+            background: #fff3cd;
+            border: 2px dashed #ffc107;
+            padding: 20px;
+            margin-top: 30px;
+            border-radius: 10px;
+        }
+
+        .attack-demo h2 {
+            color: #856404;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .attack-steps {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+
+        .attack-steps ol {
+            margin-left: 20px;
+            color: #495057;
+        }
+
+        .attack-steps li {
+            margin-bottom: 10px;
+            line-height: 1.6;
+        }
+
+        .sql-display {
+            background: #f1f3f5;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+            font-family: monospace;
+            font-size: 12px;
+            word-break: break-all;
+        }
+
+        .table-display {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .table-display th,
+        .table-display td {
+            border: 1px solid #dee2e6;
+            padding: 8px;
+            text-align: left;
+        }
+
+        .table-display th {
+            background: #667eea;
+            color: white;
+        }
+
+        .table-display tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔒 SQL注入漏洞交互式演示</h1>
+
+        <div class="warning-banner">
+            ⚠️ 警告：这是一个安全演示页面，请勿在生产环境中使用危险区域的代码！
+        </div>
+
+        <div id="message" class="message" style="display: none;"></div>
+        <div id="error" class="error-message" style="display: none;"></div>
+
+        <div class="demo-sections">
+            <!-- 危险区域 -->
+            <div class="section vulnerable">
+                <div class="section-header">
+                    <div class="section-icon">☠️</div>
+                    <div class="section-title">危险区域（未防护）</div>
+                </div>
+
+                <form id="vulnerableForm">
+                    <div class="input-group">
+                        <label for="vulnerable-id">用户ID：</label>
+                        <input
+                            type="text"
+                            id="vulnerable-id"
+                            name="id"
+                            placeholder="输入用户ID，尝试SQL注入..."
+                            value="1 or 1=1">
+                    </div>
+
+                    <div class="preset-buttons">
+                        <button type="button" class="preset-btn" onclick="setPreset('vulnerable', '1')">
+                            🔢 正常ID
+                        </button>
+                        <button type="button" class="preset-btn" onclick="setPreset('vulnerable', '1 OR 1=1')">
+                            🚨 基础注入
+                        </button>
+                        <button type="button" class="preset-btn" onclick="setPreset('vulnerable', '1 UNION SELECT null,username,password FROM users--')">
+                            🔍 联合查询
+                        </button>
+                        <button type="button" class="preset-btn" onclick="setPreset('vulnerable', '1; DROP TABLE users--')">
+                            💥 破坏性注入
+                        </button>
+                    </div>
+
+                    <button type="submit" class="submit-btn">提交查询（危险）</button>
+                </form>
+
+                <div class="result-area">
+                    <div class="result-title">📋 查询结果</div>
+                    <div id="vulnerable-result"></div>
+
+                    <div class="sql-display">
+                        <strong>🔍 执行的SQL:</strong><br>
+                        <span id="vulnerable-sql">等待查询...</span>
+                    </div>
+                </div>
+
+                <div class="info-box">
+                    <h3>⚠️ 这个区域为什么危险？</h3>
+                    <ul>
+                        <li>直接拼接用户输入到SQL语句中</li>
+                        <li>恶意SQL代码会被数据库执行</li>
+                        <li>可以窃取、修改或删除数据</li>
+                        <li>可能导致整个数据库被破坏</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- 安全区域 -->
+            <div class="section safe">
+                <div class="section-header">
+                    <div class="section-icon">✅</div>
+                    <div class="section-title">安全区域（已防护）</div>
+                </div>
+
+                <form id="safeForm">
+                    <div class="input-group">
+                        <label for="safe-id">用户ID：</label>
+                        <input
+                            type="text"
+                            id="safe-id"
+                            name="id"
+                            placeholder="输入用户ID，即使是注入攻击也会被阻止..."
+                            value="1 or 1=1">
+                    </div>
+
+                    <div class="preset-buttons">
+                        <button type="button" class="preset-btn" onclick="setPreset('safe', '1')">
+                            🔢 正常ID
+                        </button>
+                        <button type="button" class="preset-btn" onclick="setPreset('safe', '1 OR 1=1')">
+                            🚨 基础注入
+                        </button>
+                        <button type="button" class="preset-btn" onclick="setPreset('safe', '1 UNION SELECT null,username,password FROM users--')">
+                            🔍 联合查询
+                        </button>
+                        <button type="button" class="preset-btn" onclick="setPreset('safe', '1; DROP TABLE users--')">
+                            💥 破坏性注入
+                        </button>
+                    </div>
+
+                    <button type="submit" class="submit-btn">提交查询（安全）</button>
+                </form>
+
+                <div class="result-area">
+                    <div class="result-title">📋 查询结果</div>
+                    <div id="safe-result"></div>
+
+                    <div class="sql-display">
+                        <strong>🔍 执行的SQL:</strong><br>
+                        <span id="safe-sql">等待查询...</span>
+                    </div>
+                </div>
+
+                <div class="info-box">
+                    <h3>✅ 这个区域如何防护？</h3>
+                    <ul>
+                        <li>使用参数化查询（预编译SQL）</li>
+                        <li>对用户输入进行严格验证</li>
+                        <li>只允许预期的输入格式</li>
+                        <li>恶意SQL被当作普通字符串处理</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- SQL注入攻击演示 -->
+        <div class="attack-demo">
+            <h2>🎭 SQL注入攻击模拟演示</h2>
+            <p style="text-align: center; color: #856404; margin-bottom: 15px;">
+                下面演示攻击者如何利用SQL注入漏洞获取敏感信息
+            </p>
+
+            <div class="attack-steps">
+                <h3 style="margin-bottom: 10px; color: #856404;">攻击步骤：</h3>
+                <ol>
+                    <li>攻击者发现用户ID参数可能存在SQL注入漏洞</li>
+                    <li>尝试输入 <code>1 OR 1=1</code> 来测试是否存在漏洞</li>
+                    <li>如果返回所有用户数据，说明存在SQL注入漏洞</li>
+                    <li>使用 <code>UNION SELECT</code> 来获取其他表的数据</li>
+                    <li>最终可能获取用户名、密码等敏感信息</li>
+                </ol>
+            </div>
+
+            <div style="background: white; padding: 20px; border-radius: 8px; margin-top: 20px;">
+                <h3 style="margin-bottom: 10px; color: #495057;">🔴 常见SQL注入攻击示例：</h3>
+
+                <div style="margin-bottom: 15px;">
+                    <strong>1. 布尔盲注：</strong>
+                    <code style="background: #f8f9fa; padding: 2px 6px; border-radius: 3px;">1 AND 1=1</code> /
+                    <code style="background: #f8f9fa; padding: 2px 6px; border-radius: 3px;">1 AND 1=2</code>
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <strong>2. 联合查询注入：</strong>
+                    <code style="background: #f8f9fa; padding: 2px 6px; border-radius: 3px;">1 UNION SELECT username, password FROM users</code>
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <strong>3. 时间盲注：</strong>
+                    <code style="background: #f8f9fa; padding: 2px 6px; border-radius: 3px;">1 AND SLEEP(5)</code>
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <strong>4. 堆叠查询：</strong>
+                    <code style="background: #f8f9fa; padding: 2px 6px; border-radius: 3px;">1; DROP TABLE users--</code>
+                </div>
+
+                <button onclick="simulateAttack()" class="submit-btn" style="margin-top: 15px; background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%); border: 2px solid #ffc107;">
+                    🎯 模拟SQL注入攻击
+                </button>
+
+                <div id="attackResult" style="margin-top: 15px; padding: 10px; border-radius: 5px; display: none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 显示消息
+        function showMessage(msg, isError = false) {
+            const msgDiv = document.getElementById(isError ? 'error' : 'message');
+            const otherDiv = document.getElementById(isError ? 'message' : 'error');
+            msgDiv.textContent = msg;
+            msgDiv.style.display = 'block';
+            otherDiv.style.display = 'none';
+
+            setTimeout(() => {
+                msgDiv.style.display = 'none';
+            }, 5000);
+        }
+
+        // 设置预设值
+        function setPreset(area, value) {
+            const input = document.getElementById(area + '-id');
+            input.value = value;
+            input.focus();
+        }
+
+        // 处理表单提交
+        function handleFormSubmit(formId, resultId, sqlId, endpoint) {
+            const form = document.getElementById(formId);
+            const resultDiv = document.getElementById(resultId);
+            const sqlDisplay = document.getElementById(sqlId);
+
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+
+                const id = document.getElementById(formId.replace('Form', '') + '-id').value;
+
+                resultDiv.innerHTML = '<div style="text-align: center; color: #667eea;"><strong>⏳ 正在查询...</strong></div>';
+                sqlDisplay.textContent = '准备执行查询...';
+
+                fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: 'id=' + encodeURIComponent(id)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        resultDiv.innerHTML = formatResults(data.data);
+                        sqlDisplay.textContent = data.sqlExecuted || '未知SQL';
+
+                        if (data.parameterUsed) {
+                            sqlDisplay.textContent += ' [参数: ' + data.parameterUsed + ']';
+                        }
+
+                        showMessage(data.message, false);
+                    } else {
+                        resultDiv.innerHTML = '<div style="color: #c92a2a; text-align: center;"><strong>❌ 查询失败</strong></div>';
+                        sqlDisplay.textContent = data.message || '查询出错';
+                        showMessage(data.message, true);
+                    }
+                })
+                .catch(error => {
+                    resultDiv.innerHTML = '<div style="color: #c92a2a; text-align: center;"><strong>❌ 网络错误</strong></div>';
+                    sqlDisplay.textContent = '请求失败: ' + error.message;
+                    showMessage('请求失败: ' + error.message, true);
+                });
+            });
+        }
+
+        // 格式化查询结果
+        function formatResults(data) {
+            if (!data || data.length === 0) {
+                return '<div style="text-align: center; color: #868e96;">无查询结果</div>';
+            }
+
+            let html = '<table class="table-display"><thead><tr>';
+
+            // 添加表头
+            Object.keys(data[0]).forEach(key => {
+                html += '<th>' + key + '</th>';
+            });
+            html += '</tr></thead><tbody>';
+
+            // 添加数据行
+            data.forEach(row => {
+                html += '<tr>';
+                Object.values(row).forEach(value => {
+                    html += '<td>' + (value !== null ? value : 'NULL') + '</td>';
+                });
+                html += '</tr>';
+            });
+
+            html += '</tbody></table>';
+            html += '<div style="margin-top: 10px; text-align: right; color: #868e96;">共 ' + data.length + ' 条记录</div>';
+
+            return html;
+        }
+
+        // 模拟SQL注入攻击
+        function simulateAttack() {
+            const resultDiv = document.getElementById('attackResult');
+            resultDiv.style.display = 'block';
+            resultDiv.style.background = '#ffe3e3';
+            resultDiv.style.color = '#c92a2a';
+            resultDiv.innerHTML = '<strong>⚠️ 攻击演示：</strong><br>攻击者尝试使用 "1 OR 1=1" 进行SQL注入。<br>在危险区域，这会返回所有用户数据！';
+
+            setTimeout(() => {
+                resultDiv.style.background = '#d3f9d8';
+                resultDiv.style.color = '#2b8a3e';
+                resultDiv.innerHTML = '<strong>✅ 学习要点：</strong><br>这就是为什么必须使用参数化查询！<br>安全区域会阻止此类攻击，即使输入恶意SQL也会被当作普通字符串处理。';
+            }, 3000);
+        }
+
+        // 初始化表单处理
+        window.addEventListener('load', function() {
+            console.log('SQL注入漏洞演示页面已加载');
+            console.log('危险接口：/user/vulnerable（无防护）');
+            console.log('安全接口：/user/safe（参数化查询）');
+
+            handleFormSubmit('vulnerableForm', 'vulnerable-result', 'vulnerable-sql', '/user/vulnerable');
+            handleFormSubmit('safeForm', 'safe-result', 'safe-sql', '/user/safe');
+        });
+    </script>
+</body>
+</html>

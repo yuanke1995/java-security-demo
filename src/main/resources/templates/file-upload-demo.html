@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文件上传漏洞演示</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .warning-banner {
+            background: #ff6b6b;
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            text-align: center;
+            font-weight: bold;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .demo-sections {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 968px) {
+            .demo-sections {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .section {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .section.vulnerable {
+            border: 4px solid #ff6b6b;
+        }
+
+        .section.safe {
+            border: 4px solid #51cf66;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .section-icon {
+            font-size: 2em;
+            margin-right: 15px;
+        }
+
+        .section-title {
+            font-size: 1.8em;
+            font-weight: bold;
+        }
+
+        .vulnerable .section-title {
+            color: #ff6b6b;
+        }
+
+        .safe .section-title {
+            color: #51cf66;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #495057;
+        }
+
+        .input-group input[type="file"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px dashed #dee2e6;
+            border-radius: 8px;
+            background: #f8f9fa;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .input-group input[type="file"]:hover {
+            border-color: #667eea;
+            background: #e7f5ff;
+        }
+
+        .file-info {
+            margin-top: 10px;
+            padding: 10px;
+            background: #e7f5ff;
+            border-left: 4px solid #339af0;
+            border-radius: 5px;
+            font-size: 14px;
+            display: none;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: white;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .vulnerable .submit-btn {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+            border: 2px solid #ff6b6b;
+        }
+
+        .safe .submit-btn {
+            background: linear-gradient(135deg, #51cf66 0%, #40c057 100%);
+            border: 2px solid #51cf66;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+        }
+
+        .vulnerable .submit-btn:hover {
+            background: linear-gradient(135deg, #ff5252 0%, #e03e52 100%);
+            border-color: #ff5252;
+        }
+
+        .safe .submit-btn:hover {
+            background: linear-gradient(135deg, #40c057 0%, #37b24d 100%);
+            border-color: #40c057;
+        }
+
+        .submit-btn:active {
+            transform: translateY(-1px);
+        }
+
+        .files-area {
+            margin-top: 25px;
+            padding-top: 20px;
+            border-top: 2px solid #e9ecef;
+        }
+
+        .files-title {
+            font-size: 1.3em;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #495057;
+        }
+
+        .file-item {
+            background: #f8f9fa;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .file-item.danger {
+            border-left-color: #ff6b6b;
+            background: #fff5f5;
+        }
+
+        .file-item.success {
+            border-left-color: #51cf66;
+            background: #f0fff4;
+        }
+
+        .file-name {
+            font-weight: bold;
+            color: #495057;
+            margin-bottom: 5px;
+        }
+
+        .file-details {
+            font-size: 13px;
+            color: #868e96;
+        }
+
+        .file-details span {
+            margin-right: 15px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        .badge.danger {
+            background: #ff6b6b;
+            color: white;
+        }
+
+        .badge.success {
+            background: #51cf66;
+            color: white;
+        }
+
+        .info-box {
+            background: #e7f5ff;
+            border-left: 4px solid #339af0;
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 5px;
+        }
+
+        .info-box h3 {
+            color: #1971c2;
+            margin-bottom: 10px;
+        }
+
+        .info-box ul {
+            margin-left: 20px;
+            color: #495057;
+        }
+
+        .info-box li {
+            margin-bottom: 5px;
+        }
+
+        .message {
+            background: #d3f9d8;
+            color: #2b8a3e;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .test-files {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+        }
+
+        .test-files h4 {
+            color: #856404;
+            margin-bottom: 10px;
+        }
+
+        .test-files ul {
+            margin-left: 20px;
+            color: #495057;
+        }
+
+        .test-files li {
+            margin-bottom: 5px;
+            font-family: monospace;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔒 文件上传漏洞交互式演示</h1>
+
+        <div class="warning-banner">
+            ⚠️ 警告：这是一个安全演示页面，请勿在生产环境中使用危险区域的代码！
+        </div>
+
+        <div th:if="${message}" class="message">
+            <span th:text="${message}"></span>
+        </div>
+
+        <div class="demo-sections">
+            <!-- 危险区域 -->
+            <div class="section vulnerable">
+                <div class="section-header">
+                    <div class="section-icon">☠️</div>
+                    <div class="section-title">危险区域（未防护）</div>
+                </div>
+
+                <div class="test-files">
+                    <h4>🧪 测试文件示例：</h4>
+                    <ul>
+                        <li>正常图片：photo.jpg</li>
+                        <li>恶意文件：shell.jsp（WebShell）</li>
+                        <li>恶意脚本：malware.js（XSS攻击）</li>
+                        <li>路径遍历：../../../etc/crontab</li>
+                    </ul>
+                </div>
+
+                <form action="/upload/vulnerable" method="POST" enctype="multipart/form-data">
+                    <div class="input-group">
+                        <label for="vulnerable-file">选择文件上传：</label>
+                        <input type="file" id="vulnerable-file" name="file" onchange="showFileInfo('vulnerable')">
+                        <div id="vulnerable-file-info" class="file-info"></div>
+                    </div>
+
+                    <button type="submit" class="submit-btn">上传文件（危险）</button>
+                </form>
+
+                <div class="files-area">
+                    <div class="files-title">📁 已上传文件（<span th:text="${#lists.size(vulnerableFiles)}"></span>个）</div>
+                    <div th:each="file : ${vulnerableFiles}" class="file-item danger">
+                        <div class="file-name">
+                            <span th:text="${file.originalName}"></span>
+                            <span class="badge danger">危险</span>
+                        </div>
+                        <div class="file-details">
+                            <span>大小：<span th:text="${file.formattedSize}"></span></span>
+                            <span>类型：<span th:text="${file.contentType}"></span></span>
+                            <span>状态：<span th:text="${file.status}"></span></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="info-box">
+                    <h3>⚠️ 这个区域为什么危险？</h3>
+                    <ul>
+                        <li>不验证文件扩展名，可上传任意文件</li>
+                        <li>不检查MIME类型，无法识别真实文件类型</li>
+                        <li>使用原始文件名，存在路径遍历风险</li>
+                        <li>不限制文件大小，可能导致拒绝服务</li>
+                        <li>攻击者可上传WebShell控制服务器</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- 安全区域 -->
+            <div class="section safe">
+                <div class="section-header">
+                    <div class="section-icon">✅</div>
+                    <div class="section-title">安全区域（已防护）</div>
+                </div>
+
+                <div class="test-files">
+                    <h4>🧪 允许的文件类型：</h4>
+                    <ul>
+                        <li>图片：.jpg, .jpeg, .png, .gif</li>
+                        <li>文档：.pdf, .doc, .docx</li>
+                        <li>文本：.txt</li>
+                        <li>最大文件大小：5MB</li>
+                    </ul>
+                </div>
+
+                <form action="/upload/safe" method="POST" enctype="multipart/form-data">
+                    <div class="input-group">
+                        <label for="safe-file">选择文件上传：</label>
+                        <input type="file" id="safe-file" name="file" onchange="showFileInfo('safe')">
+                        <div id="safe-file-info" class="file-info"></div>
+                    </div>
+
+                    <button type="submit" class="submit-btn">上传文件（安全）</button>
+                </form>
+
+                <div class="files-area">
+                    <div class="files-title">📁 已上传文件（<span th:text="${#lists.size(safeFiles)}"></span>个）</div>
+                    <div th:each="file : ${safeFiles}" class="file-item success">
+                        <div class="file-name">
+                            <span th:text="${file.originalName}"></span>
+                            <span class="badge success">安全</span>
+                        </div>
+                        <div class="file-details">
+                            <span>大小：<span th:text="${file.formattedSize}"></span></span>
+                            <span>类型：<span th:text="${file.contentType}"></span></span>
+                            <span>状态：<span th:text="${file.status}"></span></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="info-box">
+                    <h3>✅ 这个区域如何防护？</h3>
+                    <ul>
+                        <li>验证文件扩展名（白名单机制）</li>
+                        <li>验证MIME类型，确保文件类型匹配</li>
+                        <li>使用UUID重命名文件，防止路径遍历</li>
+                        <li>限制文件大小（最大5MB）</li>
+                        <li>文件保存在安全目录，防止直接访问</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showFileInfo(area) {
+            const fileInput = document.getElementById(area + '-file');
+            const fileInfo = document.getElementById(area + '-file-info');
+
+            if (fileInput.files && fileInput.files[0]) {
+                const file = fileInput.files[0];
+                const size = formatFileSize(file.size);
+
+                fileInfo.innerHTML = `
+                    <strong>文件名：</strong>${file.name}<br>
+                    <strong>大小：</strong>${size}<br>
+                    <strong>类型：</strong>${file.type || '未知'}
+                `;
+                fileInfo.style.display = 'block';
+            } else {
+                fileInfo.style.display = 'none';
+            }
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes < 1024) {
+                return bytes + ' B';
+            } else if (bytes < 1024 * 1024) {
+                return (bytes / 1024).toFixed(2) + ' KB';
+            } else {
+                return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+            }
+        }
+    </script>
+</body>
+</html>

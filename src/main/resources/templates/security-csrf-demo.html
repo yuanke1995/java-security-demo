@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spring Security CSRF防护演示</title>
+    <!-- CSRF Token Meta标签（用于AJAX请求） -->
+    <meta name="_csrf" th:content="${_csrf != null ? _csrf.token : ''}"/>
+    <meta name="_csrf_header" th:content="${_csrf != null ? _csrf.headerName : 'X-CSRF-TOKEN'}"/>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .subtitle {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .warning-banner {
+            background: #ff6b6b;
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            text-align: center;
+            font-weight: bold;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .demo-sections {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 968px) {
+            .demo-sections {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .section {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .section.vulnerable {
+            border: 4px solid #ff6b6b;
+        }
+
+        .section.safe {
+            border: 4px solid #51cf66;
+        }
+
+        .section.danger {
+            border: 4px solid #fa5252;
+            background: #fff5f5;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .section-icon {
+            font-size: 2em;
+            margin-right: 15px;
+        }
+
+        .section-title {
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+
+        .vulnerable .section-title {
+            color: #ff6b6b;
+        }
+
+        .safe .section-title {
+            color: #51cf66;
+        }
+
+        .danger .section-title {
+            color: #fa5252;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #495057;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: white;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .vulnerable .submit-btn {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+            border: 2px solid #ff6b6b;
+        }
+
+        .safe .submit-btn {
+            background: linear-gradient(135deg, #51cf66 0%, #40c057 100%);
+            border: 2px solid #51cf66;
+        }
+
+        .danger .submit-btn {
+            background: linear-gradient(135deg, #fa5252 0%, #e03131 100%);
+            border: 2px solid #fa5252;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+        }
+
+        .info-box {
+            background: #e7f5ff;
+            border-left: 4px solid #339af0;
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 5px;
+        }
+
+        .info-box.warning {
+            background: #fff3cd;
+            border-left-color: #ffc107;
+        }
+
+        .info-box.danger {
+            background: #ffe3e3;
+            border-left-color: #fa5252;
+        }
+
+        .info-box h3 {
+            color: #1971c2;
+            margin-bottom: 10px;
+        }
+
+        .info-box.warning h3 {
+            color: #856404;
+        }
+
+        .info-box.danger h3 {
+            color: #c92a2a;
+        }
+
+        .info-box ul {
+            margin-left: 20px;
+            color: #495057;
+        }
+
+        .info-box li {
+            margin-bottom: 5px;
+        }
+
+        .message {
+            background: #d3f9d8;
+            color: #2b8a3e;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .error-message {
+            background: #ffe3e3;
+            color: #c92a2a;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .csrf-token-display {
+            background: #f1f3f5;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+            font-family: monospace;
+            font-size: 12px;
+            word-break: break-all;
+        }
+
+        .balance-display {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 1.2em;
+        }
+
+        .balance-amount {
+            font-size: 2em;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        .method-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+
+        .badge-framework {
+            background: #d3f9d8;
+            color: #2b8a3e;
+        }
+
+        .badge-danger {
+            background: #ffe3e3;
+            color: #c92a2a;
+        }
+
+        .ajax-demo {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            margin-top: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .ajax-demo h2 {
+            text-align: center;
+            color: #495057;
+            margin-bottom: 20px;
+        }
+
+        .code-example {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-size: 13px;
+            margin: 15px 0;
+        }
+
+        .feature-list {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            margin-top: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .feature-list h2 {
+            text-align: center;
+            color: #495057;
+            margin-bottom: 20px;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .feature-item {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .feature-item h3 {
+            color: #495057;
+            margin-bottom: 10px;
+        }
+
+        .feature-item p {
+            color: #868e96;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🛡️ Spring Security CSRF防护演示</h1>
+        <p class="subtitle">使用Spring Security框架内置的CSRF保护机制</p>
+
+        <div class="warning-banner">
+            ⚠️ 本演示使用Spring Security框架，自动处理CSRF Token的生成和验证
+        </div>
+
+        <div id="message" class="message" style="display: none;"></div>
+        <div id="error" class="error-message" style="display: none;"></div>
+
+        <!-- 账户余额显示 -->
+        <div class="balance-display">
+            <div>💰 当前账户余额</div>
+            <div class="balance-amount">¥<span id="balance" th:text="${balance != null ? balance : '10000.00'}">10000.00</span></div>
+        </div>
+
+        <div class="demo-sections">
+            <!-- 危险区域 -->
+            <div class="section vulnerable">
+                <div class="section-header">
+                    <div class="section-icon">☠️</div>
+                    <div>
+                        <div class="section-title">危险区域</div>
+                        <span style="color: #ff6b6b; font-size: 14px;">忽略CSRF验证</span>
+                    </div>
+                </div>
+
+                <form method="POST" action="/security/transfer/vulnerable">
+                    <div class="input-group">
+                        <label for="vuln-toAccount">收款账户：</label>
+                        <input type="text" id="vuln-toAccount" name="toAccount"
+                               value="attacker_account" required>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="vuln-amount">转账金额：</label>
+                        <input type="number" id="vuln-amount" name="amount"
+                               value="1000" min="0" step="0.01" required>
+                    </div>
+
+                    <button type="submit" class="submit-btn">💸 转账（无CSRF防护）</button>
+                </form>
+
+                <div class="info-box">
+                    <h3>⚠️ 为什么危险？</h3>
+                    <ul>
+                        <li>❌ 此接口在SecurityConfig中被配置为忽略CSRF</li>
+                        <li>❌ 攻击者可以伪造请求执行转账</li>
+                        <li>❌ 仅用于演示CSRF漏洞的危害</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- 安全区域 -->
+            <div class="section safe">
+                <div class="section-header">
+                    <div class="section-icon">✅</div>
+                    <div>
+                        <div class="section-title">安全区域</div>
+                        <span class="method-badge badge-framework">Spring Security自动防护</span>
+                    </div>
+                </div>
+
+                <form method="POST" action="/security/transfer/safe" id="safeForm">
+                    <!-- Spring Security自动处理CSRF Token -->
+                    <input type="hidden" th:name="${_csrf.parameterName}"
+                           th:value="${_csrf != null ? _csrf.token : ''}"/>
+
+                    <div class="input-group">
+                        <label for="safe-toAccount">收款账户：</label>
+                        <input type="text" id="safe-toAccount" name="toAccount"
+                               value="trusted_account" required>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="safe-amount">转账金额：</label>
+                        <input type="number" id="safe-amount" name="amount"
+                               value="100" min="0" step="0.01" required>
+                    </div>
+
+                    <div class="csrf-token-display">
+                        <strong>🔑 Spring Security CSRF Token:</strong><br>
+                        <span th:text="${_csrf != null ? _csrf.token : '未生成'}"></span>
+                    </div>
+
+                    <button type="submit" class="submit-btn">🔐 转账（Spring Security防护）</button>
+                </form>
+
+                <div class="info-box">
+                    <h3>✅ Spring Security如何防护？</h3>
+                    <ul>
+                        <li>✅ 框架自动生成强随机CSRF Token</li>
+                        <li>✅ Token存储在Session和Cookie中</li>
+                        <li>✅ 表单提交时自动验证Token</li>
+                        <li>✅ 无效Token返回403 Forbidden</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- 验证失败案例 -->
+            <div class="section danger">
+                <div class="section-header">
+                    <div class="section-icon">🚫</div>
+                    <div>
+                        <div class="section-title">验证失败案例</div>
+                        <span class="method-badge badge-danger">演示403错误</span>
+                    </div>
+                </div>
+
+                <form method="POST" action="/security/transfer/invalid-token" id="invalidTokenForm">
+                    <!-- 故意使用错误的Token -->
+                    <input type="hidden" name="_csrf" value="invalid-token-12345"/>
+
+                    <div class="input-group">
+                        <label for="invalid-toAccount">收款账户：</label>
+                        <input type="text" id="invalid-toAccount" name="toAccount"
+                               value="hacker_account" required>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="invalid-amount">转账金额：</label>
+                        <input type="number" id="invalid-amount" name="amount"
+                               value="5000" min="0" step="0.01" required>
+                    </div>
+
+                    <div class="csrf-token-display" style="background: #ffe3e3;">
+                        <strong>❌ 无效的CSRF Token:</strong><br>
+                        <span>invalid-token-12345（故意使用错误的Token）</span>
+                    </div>
+
+                    <button type="submit" class="submit-btn">🚫 转账（无效Token - 会被拒绝）</button>
+                </form>
+
+                <div class="info-box danger">
+                    <h3>🚫 为什么会失败？</h3>
+                    <ul>
+                        <li>❌ 使用了无效的CSRF Token</li>
+                        <li>❌ Spring Security验证Token失败</li>
+                        <li>❌ 返回403 Forbidden错误</li>
+                        <li>❌ 转账不会被执行</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- AJAX演示 -->
+        <div class="ajax-demo">
+            <h2>🌐 AJAX请求示例</h2>
+
+            <div style="background: #f8f9fa; padding: 20px; border-radius: 8px;">
+                <h3 style="margin-bottom: 15px;">测试1：带有效CSRF Token的AJAX请求（应该成功）</h3>
+
+                <div class="code-example">
+// 从meta标签获取CSRF Token
+const csrfToken = document.querySelector('meta[name="_csrf"]').getAttribute('content');
+const csrfHeader = document.querySelector('meta[name="_csrf_header"]').getAttribute('content');
+
+fetch('/security/api/transfer', {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        [csrfHeader]: csrfToken  // 在请求头中携带Token
+    },
+    body: 'toAccount=ajax_test&amount=50'
+})
+                </div>
+
+                <button onclick="testAjaxValid()" class="submit-btn"
+                        style="background: linear-gradient(135deg, #51cf66 0%, #40c057 100%); border: 2px solid #51cf66; margin-bottom: 20px;">
+                    ✅ 测试有效Token（应该成功）
+                </button>
+
+                <hr style="margin: 30px 0; border: none; border-top: 2px solid #dee2e6;">
+
+                <h3 style="margin-bottom: 15px;">测试2：带无效CSRF Token的AJAX请求（应该失败）</h3>
+
+                <div class="code-example">
+// 使用无效的Token
+fetch('/security/api/transfer', {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'X-CSRF-TOKEN': 'invalid-token-xyz'  // 无效的Token
+    },
+    body: 'toAccount=hacker&amount=9999'
+})
+                </div>
+
+                <button onclick="testAjaxInvalid()" class="submit-btn"
+                        style="background: linear-gradient(135deg, #fa5252 0%, #e03131 100%); border: 2px solid #fa5252;">
+                    🚫 测试无效Token（应该失败 - 403）
+                </button>
+
+                <div id="ajaxResult" style="margin-top: 15px; padding: 10px;
+                     border-radius: 5px; display: none;"></div>
+            </div>
+        </div>
+
+        <!-- 特性说明 -->
+        <div class="feature-list">
+            <h2>🎯 Spring Security CSRF防护特性</h2>
+
+            <div class="feature-grid">
+                <div class="feature-item">
+                    <h3>🔒 自动化防护</h3>
+                    <p>框架自动处理Token的生成、存储和验证，开发者无需手动编写验证逻辑。</p>
+                </div>
+
+                <div class="feature-item">
+                    <h3>🚫 验证失败阻止</h3>
+                    <p>当Token无效或缺失时，直接返回403错误，请求根本不会到达控制器。</p>
+                </div>
+
+                <div class="feature-item">
+                    <h3>🎲 强随机数生成</h3>
+                    <p>使用SecureRandom生成密码学安全的随机Token，确保Token不可预测。</p>
+                </div>
+
+                <div class="feature-item">
+                    <h3>🍪 Cookie存储</h3>
+                    <p>Token同时存储在Session和Cookie中，支持多种验证方式。</p>
+                </div>
+
+                <div class="feature-item">
+                    <h3>⚙️ 灵活配置</h3>
+                    <p>可以通过ignoringRequestMatchers配置某些接口忽略CSRF验证。</p>
+                </div>
+
+                <div class="feature-item">
+                    <h3>📝 详细日志</h3>
+                    <p>CSRF验证失败时会记录详细的日志信息，便于排查问题。</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showMessage(msg, isError = false) {
+            const msgDiv = document.getElementById(isError ? 'error' : 'message');
+            const otherDiv = document.getElementById(isError ? 'message' : 'error');
+            msgDiv.innerHTML = msg;
+            msgDiv.style.display = 'block';
+            otherDiv.style.display = 'none';
+
+            setTimeout(() => {
+                msgDiv.style.display = 'none';
+            }, 5000);
+        }
+
+        function showAjaxResult(msg, isError = false) {
+            const resultDiv = document.getElementById('ajaxResult');
+            resultDiv.style.display = 'block';
+            resultDiv.style.background = isError ? '#ffe3e3' : '#d3f9d8';
+            resultDiv.style.color = isError ? '#c92a2a' : '#2b8a3e';
+            resultDiv.innerHTML = msg;
+        }
+
+        function testAjaxValid() {
+            showAjaxResult('<strong>⏳ 发送请求中...</strong>');
+
+            const csrfToken = document.querySelector('meta[name="_csrf"]').getAttribute('content');
+            const csrfHeader = document.querySelector('meta[name="_csrf_header"]').getAttribute('content');
+
+            fetch('/security/api/transfer', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    [csrfHeader]: csrfToken
+                },
+                body: 'toAccount=ajax_test&amount=50'
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('HTTP ' + response.status + ': CSRF验证失败');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    showAjaxResult('<strong>✅ AJAX请求成功：</strong><br>' +
+                                 data.message + '<br>余额：¥' + data.balance);
+                    document.getElementById('balance').textContent = data.balance;
+                } else {
+                    showAjaxResult('<strong>❌ 转账失败：</strong><br>' + data.message, true);
+                }
+            })
+            .catch(error => {
+                showAjaxResult('<strong>❌ 请求失败：</strong><br>' + error.message, true);
+            });
+        }
+
+        function testAjaxInvalid() {
+            showAjaxResult('<strong>⏳ 发送请求中（使用无效Token）...</strong>');
+
+            fetch('/security/api/transfer', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRF-TOKEN': 'invalid-token-xyz'
+                },
+                body: 'toAccount=hacker&amount=9999'
+            })
+            .then(response => {
+                console.log('Response status:', response.status);
+                return response.json().then(data => ({status: response.status, data: data}));
+            })
+            .then(({status, data}) => {
+                if (status === 403) {
+                    showAjaxResult(
+                        '<strong>🚫 CSRF验证失败（预期结果）：</strong><br>' +
+                        'HTTP状态码：403 Forbidden<br>' +
+                        '错误信息：' + (data.message || '无效的CSRF Token') + '<br><br>' +
+                        '<strong>✅ 这正是我们想要的！</strong><br>' +
+                        'Spring Security成功阻止了无效Token的请求。'
+                    );
+                } else {
+                    showAjaxResult(
+                        '<strong>⚠️ 意外情况：</strong><br>' +
+                        '请求没有被阻止，状态码：' + status + '<br>' +
+                        '这可能意味着CSRF配置有问题。',
+                        true
+                    );
+                }
+            })
+            .catch(error => {
+                showAjaxResult(
+                    '<strong>🚫 请求被阻止（预期结果）：</strong><br>' +
+                    '错误：' + error.message + '<br><br>' +
+                    '<strong>✅ Spring Security成功阻止了攻击！</strong>'
+                );
+            });
+        }
+
+        window.addEventListener('load', function() {
+            console.log('Spring Security CSRF演示页面已加载');
+            console.log('危险接口：/security/transfer/vulnerable（忽略CSRF）');
+            console.log('安全接口：/security/transfer/safe（自动CSRF验证）');
+            console.log('验证失败：/security/transfer/invalid-token（无效Token）');
+        });
+    </script>
+</body>
+</html>

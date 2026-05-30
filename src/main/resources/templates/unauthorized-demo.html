@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>未授权/越权访问漏洞演示</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .warning-banner {
+            background: #ff6b6b;
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            text-align: center;
+            font-weight: bold;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .login-section {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            text-align: center;
+        }
+
+        .login-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+
+        .login-btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.3s;
+            color: white;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .login-btn.user1 {
+            background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);
+        }
+
+        .login-btn.user2 {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .login-btn.user3 {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .login-btn.admin {
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+        }
+
+        .login-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+        }
+
+        .logout-btn {
+            background: linear-gradient(135deg, #868e96 0%, #495057 100%);
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            margin-left: 15px;
+        }
+
+        .demo-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 768px) {
+            .demo-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .demo-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .demo-card.vulnerable {
+            border: 4px solid #ff6b6b;
+        }
+
+        .demo-card.safe {
+            border: 4px solid #51cf66;
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .card-icon {
+            font-size: 2.5em;
+            margin-right: 15px;
+        }
+
+        .card-title {
+            font-size: 1.8em;
+            font-weight: bold;
+        }
+
+        .vulnerable .card-title {
+            color: #ff6b6b;
+        }
+
+        .safe .card-title {
+            color: #51cf66;
+        }
+
+        .action-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .action-btn {
+            padding: 10px 20px;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+            background: white;
+            color: #495057;
+        }
+
+        .action-btn:hover {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+            transform: translateY(-2px);
+        }
+
+        .action-btn.danger {
+            background: #fff5f5;
+            border-color: #ff6b6b;
+            color: #ff6b6b;
+        }
+
+        .action-btn.danger:hover {
+            background: #ff6b6b;
+            color: white;
+        }
+
+        .result-area {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            min-height: 150px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            border: 2px solid #e9ecef;
+        }
+
+        .result-area pre {
+            margin: 0;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .info-box {
+            background: #e7f5ff;
+            border-left: 4px solid #339af0;
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 5px;
+        }
+
+        .info-box h3 {
+            color: #1971c2;
+            margin-bottom: 10px;
+        }
+
+        .info-box ul {
+            margin-left: 20px;
+            color: #495057;
+        }
+
+        .info-box li {
+            margin-bottom: 5px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        .status-badge.logged-in {
+            background: #d3f9d8;
+            color: #2b8a3e;
+        }
+
+        .status-badge.not-logged-in {
+            background: #ffe3e3;
+            color: #c92a2a;
+        }
+
+        .user-info {
+            background: #fff9db;
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin-top: 10px;
+            display: inline-block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔒 未授权/越权访问漏洞交互式演示</h1>
+
+        <div class="warning-banner">
+            ⚠️ 警告：这是一个安全演示页面，展示了未授权访问和越权访问的严重安全隐患！
+        </div>
+
+        <!-- 登录区域 -->
+        <div class="login-section">
+            <h2 style="margin-bottom: 15px; color: #495057;">👤 用户登录（模拟）</h2>
+            <p style="color: #868e96; margin-bottom: 15px;">点击下方按钮模拟不同用户登录，体验权限控制问题</p>
+
+            <div class="login-buttons">
+                <button class="login-btn user1" onclick="login(1)">登录张三 (ID:1)</button>
+                <button class="login-btn user2" onclick="login(2)">登录李四 (ID:2)</button>
+                <button class="login-btn user3" onclick="login(3)">登录王五 (ID:3)</button>
+                <button class="login-btn admin" onclick="login(4)">登录管理员 (ID:4)</button>
+                <button class="logout-btn" onclick="logout()">退出登录</button>
+            </div>
+
+            <div id="loginStatus"></div>
+        </div>
+
+        <div class="demo-grid">
+            <!-- 漏洞1：未授权访问用户列表 -->
+            <div class="demo-card vulnerable">
+                <div class="card-header">
+                    <div class="card-icon">☠️</div>
+                    <div>
+                        <div class="card-title">漏洞1：未授权访问</div>
+                        <small style="color: #868e96;">无需登录即可查看所有用户信息</small>
+                    </div>
+                </div>
+
+                <div class="action-buttons">
+                    <button class="action-btn danger" onclick="getAllUsersVulnerable()">
+                        🔓 查看所有用户（未授权）
+                    </button>
+                </div>
+
+                <div class="result-area" id="result1">
+                    <pre>点击按钮查看结果...</pre>
+                </div>
+
+                <div class="info-box">
+                    <h3>⚠️ 漏洞说明</h3>
+                    <ul>
+                        <li><strong>问题：</strong>接口没有进行身份验证</li>
+                        <li><strong>影响：</strong>任何人都可以获取所有用户的敏感信息</li>
+                        <li><strong>泄露数据：</strong>用户名、邮箱、手机号等隐私信息</li>
+                        <li><strong>修复方案：</strong>添加身份验证中间件，要求登录后才能访问</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- 安全版本：用户信息查询 -->
+            <div class="demo-card safe">
+                <div class="card-header">
+                    <div class="card-icon">✅</div>
+                    <div>
+                        <div class="card-title">安全实现：用户信息查询</div>
+                        <small style="color: #868e96;">需要登录且只能查看自己的信息</small>
+                    </div>
+                </div>
+
+                <div class="action-buttons">
+                    <button class="action-btn" onclick="getUserProfileSafe()">
+                        🔐 查看我的资料（需登录）
+                    </button>
+                </div>
+
+                <div class="result-area" id="result2">
+                    <pre>点击按钮查看结果...</pre>
+                </div>
+
+                <div class="info-box">
+                    <h3>✅ 安全措施</h3>
+                    <ul>
+                        <li>强制要求用户登录</li>
+                        <li>只返回当前登录用户的信息</li>
+                        <li>敏感信息自动脱敏处理</li>
+                        <li>无法访问其他用户的数据</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- 漏洞2：水平越权访问订单 -->
+            <div class="demo-card vulnerable">
+                <div class="card-header">
+                    <div class="card-icon">☠️</div>
+                    <div>
+                        <div class="card-title">漏洞2：水平越权</div>
+                        <small style="color: #868e96;">可以查看其他用户的订单</small>
+                    </div>
+                </div>
+
+                <div class="action-buttons">
+                    <button class="action-btn danger" onclick="getOrderVulnerable(1001)">
+                        查看订单1001（张三的）
+                    </button>
+                    <button class="action-btn danger" onclick="getOrderVulnerable(1003)">
+                        查看订单1003（李四的）
+                    </button>
+                    <button class="action-btn danger" onclick="getOrderVulnerable(1005)">
+                        查看订单1005（王五的）
+                    </button>
+                </div>
+
+                <div class="result-area" id="result3">
+                    <pre>点击按钮查看结果...</pre>
+                </div>
+
+                <div class="info-box">
+                    <h3>⚠️ 漏洞说明</h3>
+                    <ul>
+                        <li><strong>问题：</strong>只验证登录，不验证订单归属</li>
+                        <li><strong>影响：</strong>用户可以查看任意用户的订单信息</li>
+                        <li><strong>攻击方式：</strong>遍历订单ID获取他人订单</li>
+                        <li><strong>修复方案：</strong>验证订单是否属于当前登录用户</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- 安全版本：订单查询 -->
+            <div class="demo-card safe">
+                <div class="card-header">
+                    <div class="card-icon">✅</div>
+                    <div>
+                        <div class="card-title">安全实现：订单查询</div>
+                        <small style="color: #868e96;">只能查看属于自己的订单</small>
+                    </div>
+                </div>
+
+                <div class="action-buttons">
+                    <button class="action-btn" onclick="getOrderSafe(1001)">
+                        查看订单1001
+                    </button>
+                    <button class="action-btn" onclick="getOrderSafe(1003)">
+                        查看订单1003
+                    </button>
+                    <button class="action-btn" onclick="getOrderSafe(1005)">
+                        查看订单1005
+                    </button>
+                </div>
+
+                <div class="result-area" id="result4">
+                    <pre>点击按钮查看结果...</pre>
+                </div>
+
+                <div class="info-box">
+                    <h3>✅ 安全措施</h3>
+                    <ul>
+                        <li>强制要求用户登录</li>
+                        <li>验证订单归属权</li>
+                        <li>非本人订单拒绝访问</li>
+                        <li>返回清晰的错误提示</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- 漏洞3：垂直越权 -->
+            <div class="demo-card vulnerable">
+                <div class="card-header">
+                    <div class="card-icon">☠️</div>
+                    <div>
+                        <div class="card-title">漏洞3：垂直越权</div>
+                        <small style="color: #868e96;">普通用户可执行管理员操作</small>
+                    </div>
+                </div>
+
+                <div class="action-buttons">
+                    <button class="action-btn danger" onclick="deleteUserVulnerable(1)">
+                        🗑️ 删除用户张三 (ID:1)
+                    </button>
+                    <button class="action-btn danger" onclick="deleteUserVulnerable(2)">
+                        🗑️ 删除用户李四 (ID:2)
+                    </button>
+                    <button class="action-btn danger" onclick="deleteUserVulnerable(3)">
+                        🗑️ 删除用户王五 (ID:3)
+                    </button>
+                </div>
+
+                <div class="result-area" id="result5">
+                    <pre>点击按钮查看结果...</pre>
+                </div>
+
+                <div class="info-box">
+                    <h3>⚠️ 漏洞说明</h3>
+                    <ul>
+                        <li><strong>问题：</strong>没有验证管理员权限</li>
+                        <li><strong>影响：</strong>任何用户都可以删除其他用户</li>
+                        <li><strong>攻击方式：</strong>普通用户调用管理员接口</li>
+                        <li><strong>修复方案：</strong>添加角色权限验证，仅允许管理员操作</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- 防护建议 -->
+            <div class="demo-card" style="border: 4px solid #ffd43b;">
+                <div class="card-header">
+                    <div class="card-icon">🛡️</div>
+                    <div>
+                        <div class="card-title" style="color: #f08c00;">综合防护建议</div>
+                        <small style="color: #868e96;">如何防止未授权/越权访问</small>
+                    </div>
+                </div>
+
+                <div style="line-height: 1.8; color: #495057;">
+                    <h3 style="color: #f08c00; margin-bottom: 10px;">📋 安全防护清单</h3>
+
+                    <h4 style="margin-top: 15px; margin-bottom: 5px;">1️⃣ 身份验证（Authentication）</h4>
+                    <ul style="margin-left: 20px; margin-bottom: 10px;">
+                        <li>所有敏感接口必须要求登录</li>
+                        <li>使用JWT Token或Session进行身份验证</li>
+                        <li>设置合理的会话超时时间</li>
+                        <li>实施多因素认证（MFA）</li>
+                    </ul>
+
+                    <h4 style="margin-top: 15px; margin-bottom: 5px;">2️⃣ 权限控制（Authorization）</h4>
+                    <ul style="margin-left: 20px; margin-bottom: 10px;">
+                        <li>实施基于角色的访问控制（RBAC）</li>
+                        <li>验证用户对资源的访问权限</li>
+                        <li>遵循最小权限原则</li>
+                        <li>定期审查和更新权限配置</li>
+                    </ul>
+
+                    <h4 style="margin-top: 15px; margin-bottom: 5px;">3️⃣ 资源所有权验证</h4>
+                    <ul style="margin-left: 20px; margin-bottom: 10px;">
+                        <li>验证用户只能访问自己的资源</li>
+                        <li>不要直接使用客户端传入的资源ID</li>
+                        <li>在服务端验证资源归属关系</li>
+                        <li>使用间接引用映射表</li>
+                    </ul>
+
+                    <h4 style="margin-top: 15px; margin-bottom: 5px;">4️⃣ 安全最佳实践</h4>
+                    <ul style="margin-left: 20px; margin-bottom: 10px;">
+                        <li>默认拒绝所有访问，显式授权</li>
+                        <li>记录所有敏感操作的审计日志</li>
+                        <li>定期进行安全渗透测试</li>
+                        <li>实施API速率限制防止暴力枚举</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentUserId = null;
+        let currentUser = null;
+
+        // 登录
+        async function login(userId) {
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `userId=${userId}`
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    currentUserId = userId;
+                    currentUser = data;
+                    updateLoginStatus();
+                    alert(`✅ 登录成功！\n用户：${data.username}\n角色：${data.role}`);
+                } else {
+                    alert('❌ 登录失败：' + data.message);
+                }
+            } catch (error) {
+                alert('❌ 请求失败：' + error.message);
+            }
+        }
+
+        // 登出
+        async function logout() {
+            try {
+                const response = await fetch('/api/logout', {
+                    method: 'POST'
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    currentUserId = null;
+                    currentUser = null;
+                    updateLoginStatus();
+                    alert('✅ 已退出登录');
+                }
+            } catch (error) {
+                alert('❌ 请求失败：' + error.message);
+            }
+        }
+
+        // 更新登录状态显示
+        function updateLoginStatus() {
+            const statusDiv = document.getElementById('loginStatus');
+            if (currentUserId) {
+                statusDiv.innerHTML = `
+                    <span class="status-badge logged-in">✅ 已登录</span>
+                    <div class="user-info">
+                        当前用户：<strong>${currentUser.username}</strong> |
+                        ID: ${currentUser.userId} |
+                        角色: ${currentUser.role}
+                    </div>
+                `;
+            } else {
+                statusDiv.innerHTML = '<span class="status-badge not-logged-in">❌ 未登录</span>';
+            }
+        }
+
+        // 漏洞1：未授权访问用户列表
+        async function getAllUsersVulnerable() {
+            try {
+                const response = await fetch('/api/users/list');
+                const data = await response.json();
+                displayResult('result1', data);
+            } catch (error) {
+                displayError('result1', error.message);
+            }
+        }
+
+        // 安全版本：获取用户资料
+        async function getUserProfileSafe() {
+            try {
+                const response = await fetch('/api/users/safe/profile');
+                const data = await response.json();
+                displayResult('result2', data);
+            } catch (error) {
+                displayError('result2', error.message);
+            }
+        }
+
+        // 漏洞2：未授权访问订单
+        async function getOrderVulnerable(orderId) {
+            try {
+                const response = await fetch(`/api/orders/${orderId}`);
+                const data = await response.json();
+                displayResult('result3', data);
+            } catch (error) {
+                displayError('result3', error.message);
+            }
+        }
+
+        // 安全版本：获取订单
+        async function getOrderSafe(orderId) {
+            try {
+                const response = await fetch(`/api/orders/safe/${orderId}`);
+                const data = await response.json();
+                displayResult('result4', data);
+            } catch (error) {
+                displayError('result4', error.message);
+            }
+        }
+
+        // 漏洞3：垂直越权删除用户
+        async function deleteUserVulnerable(userId) {
+            if (!confirm(`⚠️ 警告：这将删除用户ID为${userId}的账号！\n\n在真实系统中，这应该是只有管理员才能执行的操作。\n但由于存在垂直越权漏洞，任何用户都可以执行。\n\n确定要继续吗？`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/admin/delete-user/${userId}`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                displayResult('result5', data);
+
+                if (data.success) {
+                    setTimeout(() => {
+                        alert('⚠️ 用户已被删除！\n刷新页面后该用户将不存在。\n\n这就是垂直越权漏洞的危害！');
+                    }, 500);
+                }
+            } catch (error) {
+                displayError('result5', error.message);
+            }
+        }
+
+        // 显示结果
+        function displayResult(elementId, data) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+        }
+
+        // 显示错误
+        function displayError(elementId, message) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<pre style="color: #ff6b66;">❌ 错误：${message}</pre>`;
+        }
+
+        // 页面加载时更新登录状态
+        window.addEventListener('load', function() {
+            updateLoginStatus();
+        });
+    </script>
+</body>
+</html>

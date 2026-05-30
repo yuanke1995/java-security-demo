@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>敏感信息泄露漏洞演示</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .subtitle {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .warning-banner {
+            background: #ff6b6b;
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            text-align: center;
+            font-weight: bold;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .demo-sections {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 968px) {
+            .demo-sections {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .section {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .section.vulnerable {
+            border: 4px solid #ff6b6b;
+        }
+
+        .section.safe {
+            border: 4px solid #51cf66;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .section-icon {
+            font-size: 2em;
+            margin-right: 15px;
+        }
+
+        .section-title {
+            font-size: 1.8em;
+            font-weight: bold;
+        }
+
+        .vulnerable .section-title {
+            color: #ff6b6b;
+        }
+
+        .safe .section-title {
+            color: #51cf66;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #495057;
+        }
+
+        .input-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .input-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: white;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .vulnerable .submit-btn {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+            border: 2px solid #ff6b6b;
+        }
+
+        .safe .submit-btn {
+            background: linear-gradient(135deg, #51cf66 0%, #40c057 100%);
+            border: 2px solid #51cf66;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+        }
+
+        .result-area {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            background: #f8f9fa;
+            min-height: 150px;
+        }
+
+        .result-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #495057;
+        }
+
+        .result-content {
+            font-family: monospace;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .info-box {
+            background: #e7f5ff;
+            border-left: 4px solid #339af0;
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 5px;
+        }
+
+        .info-box.danger {
+            background: #ffe3e3;
+            border-left-color: #fa5252;
+        }
+
+        .info-box h3 {
+            color: #1971c2;
+            margin-bottom: 10px;
+        }
+
+        .info-box.danger h3 {
+            color: #c92a2a;
+        }
+
+        .info-box ul {
+            margin-left: 20px;
+            color: #495057;
+        }
+
+        .info-box li {
+            margin-bottom: 5px;
+        }
+
+        .user-list {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            margin-top: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .user-list h2 {
+            text-align: center;
+            color: #495057;
+            margin-bottom: 20px;
+        }
+
+        .user-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .user-table th,
+        .user-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .user-table th {
+            background: #f8f9fa;
+            font-weight: bold;
+            color: #495057;
+        }
+
+        .user-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .badge-danger {
+            background: #ffe3e3;
+            color: #c92a2a;
+        }
+
+        .badge-success {
+            background: #d3f9d8;
+            color: #2b8a3e;
+        }
+
+        .highlight {
+            background: #fff3cd;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: bold;
+        }
+
+        .mask-example {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 30px;
+        }
+
+        .mask-example h3 {
+            margin-bottom: 15px;
+            color: #495057;
+        }
+
+        .example-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+        }
+
+        .example-item {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .example-item strong {
+            color: #495057;
+        }
+
+        .arrow {
+            color: #868e96;
+            margin: 0 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 敏感信息泄露漏洞演示</h1>
+        <p class="subtitle">对比展示敏感信息的泄露风险和防护措施</p>
+
+        <div class="warning-banner">
+            ⚠️ 警告：本演示展示敏感信息泄露的危害，请勿在生产环境中暴露敏感数据！
+        </div>
+
+        <div class="demo-sections">
+            <!-- 危险区域 -->
+            <div class="section vulnerable">
+                <div class="section-header">
+                    <div class="section-icon">☠️</div>
+                    <div class="section-title">危险区域（完整信息）</div>
+                </div>
+
+                <div class="input-group">
+                    <label for="vuln-phone">选择用户：</label>
+                    <select id="vuln-phone">
+                        <option value="13800138000">张三 (13800138000)</option>
+                        <option value="13900139000">李四 (13900139000)</option>
+                        <option value="13700137000">王五 (13700137000)</option>
+                    </select>
+                </div>
+
+                <button id="vuln-btn" class="submit-btn">🔍 查询用户信息（危险）</button>
+
+                <div class="result-area">
+                    <div class="result-title">📋 查询结果：</div>
+                    <div id="vuln-result" class="result-content">
+                        点击按钮查看结果...
+                    </div>
+                </div>
+
+                <div class="info-box danger">
+                    <h3>⚠️ 这个接口为什么危险？</h3>
+                    <ul>
+                        <li>❌ 返回完整的手机号（未脱敏）</li>
+                        <li>❌ 返回完整的身份证号（未脱敏）</li>
+                        <li>❌ 返回完整的邮箱地址（未脱敏）</li>
+                        <li>❌ <span class="highlight">返回明文密码（最严重！）</span></li>
+                        <li>❌ 日志中记录完整敏感信息</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- 安全区域 -->
+            <div class="section safe">
+                <div class="section-header">
+                    <div class="section-icon">✅</div>
+                    <div class="section-title">安全区域（脱敏信息）</div>
+                </div>
+
+                <div class="input-group">
+                    <label for="safe-phone">选择用户：</label>
+                    <select id="safe-phone">
+                        <option value="13800138000">张三 (13800138000)</option>
+                        <option value="13900139000">李四 (13900139000)</option>
+                        <option value="13700137000">王五 (13700137000)</option>
+                    </select>
+                </div>
+
+                <button id="safe-btn" class="submit-btn">🔍 查询用户信息（安全）</button>
+
+                <div class="result-area">
+                    <div class="result-title">📋 查询结果：</div>
+                    <div id="safe-result" class="result-content">
+                        点击按钮查看结果...
+                    </div>
+                </div>
+
+                <div class="info-box">
+                    <h3>✅ 这个接口如何防护？</h3>
+                    <ul>
+                        <li>✅ 手机号脱敏：138****8000</li>
+                        <li>✅ 身份证号脱敏：110101**********1234</li>
+                        <li>✅ 邮箱脱敏：z***@example.com</li>
+                        <li>✅ <span class="highlight">不返回密码（或使用***代替）</span></li>
+                        <li>✅ 日志中只记录脱敏后的信息</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- 脱敏示例 -->
+        <div class="mask-example">
+            <h3>📝 敏感信息脱敏规则示例</h3>
+
+            <div class="example-grid">
+                <div class="example-item">
+                    <strong>手机号脱敏：</strong><br>
+                    原始：13800138000<br>
+                    <span class="arrow">→</span>
+                    脱敏：<span class="badge badge-success">138****8000</span>
+                </div>
+
+                <div class="example-item">
+                    <strong>身份证号脱敏：</strong><br>
+                    原始：110101199001011234<br>
+                    <span class="arrow">→</span>
+                    脱敏：<span class="badge badge-success">110101**********1234</span>
+                </div>
+
+                <div class="example-item">
+                    <strong>邮箱脱敏：</strong><br>
+                    原始：zhangsan@example.com<br>
+                    <span class="arrow">→</span>
+                    脱敏：<span class="badge badge-success">z***@example.com</span>
+                </div>
+
+                <div class="example-item">
+                    <strong>密码处理：</strong><br>
+                    原始：123456<br>
+                    <span class="arrow">→</span>
+                    处理：<span class="badge badge-success">***（不返回）</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 用户列表 -->
+        <div class="user-list">
+            <h2>👥 测试用户列表</h2>
+
+            <table class="user-table">
+                <thead>
+                    <tr>
+                        <th>姓名</th>
+                        <th>手机号</th>
+                        <th>身份证号</th>
+                        <th>邮箱</th>
+                        <th>状态</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="user : ${users}">
+                        <td th:text="${user.name}"></td>
+                        <td th:text="${user.phone}"></td>
+                        <td th:text="${user.idCard}"></td>
+                        <td th:text="${user.email}"></td>
+                        <td>
+                            <span class="badge badge-danger">测试数据</span>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div style="margin-top: 20px; padding: 15px; background: #fff3cd; border-radius: 8px; color: #856404;">
+                <strong>⚠️ 注意：</strong>以上都是测试数据，仅用于演示目的。在真实系统中，这些信息都需要严格保护！
+            </div>
+        </div>
+    </div>
+
+    <script>
+        console.log('=== 脚本开始加载 ===');
+
+        function formatJSON(data) {
+            return JSON.stringify(data, null, 2);
+        }
+
+        // 危险查询函数
+        document.getElementById('vuln-btn').onclick = function() {
+            console.log('【危险查询】按钮被点击');
+            var phone = document.getElementById('vuln-phone').value;
+            var resultDiv = document.getElementById('vuln-result');
+
+            console.log('【危险查询】手机号:', phone);
+            resultDiv.innerHTML = '<div style="color: #868e96;">查询中...</div>';
+
+            fetch('/user/info/vulnerable?phone=' + phone)
+                .then(function(response) {
+                    console.log('【危险查询】响应状态:', response.status);
+                    return response.json();
+                })
+                .then(function(data) {
+                    console.log('【危险查询】返回数据:', data);
+                    if (data.success) {
+                        resultDiv.innerHTML = '<pre style="color: #c92a2a;">' + formatJSON(data.data) + '</pre>' +
+                            '<div style="margin-top: 10px; padding: 10px; background: #ffe3e3; border-radius: 5px; color: #c92a2a;">' +
+                            '<strong>⚠️ 警告：</strong>以上包含了完整的敏感信息，包括明文密码！<br>' +
+                            '如果这是真实数据，会造成严重的隐私泄露。' +
+                            '</div>';
+                    } else {
+                        resultDiv.innerHTML = '<div style="color: #c92a2a;">错误：' + data.message + '</div>';
+                    }
+                })
+                .catch(function(error) {
+                    console.error('【危险查询】错误:', error);
+                    resultDiv.innerHTML = '<div style="color: #c92a2a;">查询失败：' + error.message + '</div>';
+                });
+        };
+
+        // 安全查询函数
+        document.getElementById('safe-btn').onclick = function() {
+            console.log('【安全查询】按钮被点击');
+            var phone = document.getElementById('safe-phone').value;
+            var resultDiv = document.getElementById('safe-result');
+
+            console.log('【安全查询】手机号:', phone);
+            resultDiv.innerHTML = '<div style="color: #868e96;">查询中...</div>';
+
+            fetch('/user/info/safe?phone=' + phone)
+                .then(function(response) {
+                    console.log('【安全查询】响应状态:', response.status);
+                    return response.json();
+                })
+                .then(function(data) {
+                    console.log('【安全查询】返回数据:', data);
+                    if (data.success) {
+                        resultDiv.innerHTML = '<pre style="color: #2b8a3e;">' + formatJSON(data.data) + '</pre>' +
+                            '<div style="margin-top: 10px; padding: 10px; background: #d3f9d8; border-radius: 5px; color: #2b8a3e;">' +
+                            '<strong>✅ 安全：</strong>敏感信息已脱敏，密码未返回。<br>' +
+                            '即使数据被截获，也不会泄露用户的真实信息。' +
+                            '</div>';
+                    } else {
+                        resultDiv.innerHTML = '<div style="color: #c92a2a;">错误：' + data.message + '</div>';
+                    }
+                })
+                .catch(function(error) {
+                    console.error('【安全查询】错误:', error);
+                    resultDiv.innerHTML = '<div style="color: #c92a2a;">查询失败：' + error.message + '</div>';
+                });
+        };
+
+        console.log('=== 脚本加载完成 ===');
+        console.log('危险按钮:', document.getElementById('vuln-btn'));
+        console.log('安全按钮:', document.getElementById('safe-btn'));
+    </script>
+</body>
+</html>
