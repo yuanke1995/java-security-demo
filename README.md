@@ -43,8 +43,6 @@ src/
 │ │ ├── unauthorized-demo.html # 未授权/越权演示 
 │ │ └── security-access-demo.html # Spring Security防护演示 
 │ └── application.yml # 应用配置 
-└── test/java/org/example/security/ 
-└── SecurityVulnerabilityTests.java # 安全漏洞测试
 ```
 
 ## 漏洞演示列表
