@@ -13,7 +13,8 @@
 ## 项目结构
 
 ```
-src/ ├── main/java/org/example/security/ 
+src/
+├── main/java/org/example/security/ 
 │ ├── config/ # 安全配置 
 │ │ └── SecurityConfig.java # Spring Security配置 
 │ ├── controller/ # 控制器 
