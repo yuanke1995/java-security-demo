@@ -235,4 +235,14 @@ public class CsrfVulnerableController {
         CsrfTokenManager.invalidateToken(request);
         return "{\"message\":\"已安全登出\"}";
     }
+
+    /**
+     * 恶意网站演示页面
+     * 这个页面模拟攻击者创建的钓鱼网站
+     * 用于演示真实的 CSRF 攻击场景
+     */
+    @GetMapping("/malicious-site")
+    public String maliciousSitePage() {
+        return "malicious-site";
+    }
 }
