@@ -1,8 +1,6 @@
 package org.example.security.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.example.security.filter.CsrfFilter;
-import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
@@ -11,6 +9,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
+
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
@@ -131,21 +130,6 @@ public class SecurityConfig {
                 System.err.println("写入响应失败：" + e.getMessage());
             }
         };
-    }
-
-
-    /**
-     * 注册CSRF防护过滤器（自定义CSRF防护）
-     * 对所有URL生效，但过滤器内部会排除GET请求和特定路径
-     */
-//    @Bean
-    public FilterRegistrationBean<CsrfFilter> csrfFilter() {
-        FilterRegistrationBean<CsrfFilter> registration = new FilterRegistrationBean<>();
-        registration.setFilter(new CsrfFilter());
-        registration.addUrlPatterns("/*");
-        registration.setName("csrfFilter");
-        registration.setOrder(1);
-        return registration;
     }
 
     /**

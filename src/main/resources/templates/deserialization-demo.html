@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>不安全的反序列化漏洞演示</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .warning-banner {
+            background: #ff6b6b;
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            text-align: center;
+            font-weight: bold;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .demo-sections {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 968px) {
+            .demo-sections {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .section {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .section.vulnerable {
+            border: 4px solid #ff6b6b;
+        }
+
+        .section.safe {
+            border: 4px solid #51cf66;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .section-icon {
+            font-size: 2em;
+            margin-right: 15px;
+        }
+
+        .section-title {
+            font-size: 1.8em;
+            font-weight: bold;
+        }
+
+        .vulnerable .section-title {
+            color: #ff6b6b;
+        }
+
+        .safe .section-title {
+            color: #51cf66;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #495057;
+        }
+
+        .input-group textarea {
+            width: 100%;
+            min-height: 120px;
+            padding: 12px;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            font-size: 13px;
+            font-family: 'Courier New', monospace;
+            resize: vertical;
+            transition: border-color 0.3s;
+        }
+
+        .input-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .preset-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .preset-btn {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.3s;
+            background: #e9ecef;
+            color: #495057;
+        }
+
+        .preset-btn:hover {
+            background: #667eea;
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: white;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .vulnerable .submit-btn {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+            border: 2px solid #ff6b6b;
+        }
+
+        .safe .submit-btn {
+            background: linear-gradient(135deg, #51cf66 0%, #40c057 100%);
+            border: 2px solid #51cf66;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+        }
+
+        .vulnerable .submit-btn:hover {
+            background: linear-gradient(135deg, #ff5252 0%, #e03e52 100%);
+            border-color: #ff5252;
+        }
+
+        .safe .submit-btn:hover {
+            background: linear-gradient(135deg, #40c057 0%, #37b24d 100%);
+            border-color: #40c057;
+        }
+
+        .submit-btn:active {
+            transform: translateY(-1px);
+        }
+
+        .result-area {
+            margin-top: 25px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .result-title {
+            font-size: 1.3em;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #495057;
+        }
+
+        .result-content {
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .info-box {
+            background: #e7f5ff;
+            border-left: 4px solid #339af0;
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 5px;
+        }
+
+        .info-box h3 {
+            color: #1971c2;
+            margin-bottom: 10px;
+        }
+
+        .info-box ul {
+            margin-left: 20px;
+            color: #495057;
+        }
+
+        .info-box li {
+            margin-bottom: 5px;
+        }
+
+        .message {
+            background: #d3f9d8;
+            color: #2b8a3e;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .generate-btn {
+            background: #339af0;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.3s;
+            margin-bottom: 20px;
+            width: 100%;
+        }
+
+        .generate-btn:hover {
+            background: #228be6;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        .code-example {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 15px;
+            margin-top: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔒 不安全的反序列化漏洞交互式演示</h1>
+
+        <div class="warning-banner">
+            ⚠️ 警告：这是一个安全演示页面，展示了Java反序列化漏洞的危险性！
+        </div>
+
+        <div th:if="${message}" class="message">
+            <span th:text="${message}"></span>
+        </div>
+
+        <button class="generate-btn" onclick="generateSample()">
+            📦 生成示例序列化数据（User对象）
+        </button>
+
+        <div class="demo-sections">
+            <!-- 危险区域 -->
+            <div class="section vulnerable">
+                <div class="section-header">
+                    <div class="section-icon">☠️</div>
+                    <div class="section-title">危险区域（未防护）</div>
+                </div>
+
+                <form id="vulnerableForm" onsubmit="return submitVulnerable(event)">
+                    <div class="input-group">
+                        <label for="vulnerable-data">Base64编码的序列化数据：</label>
+                        <textarea
+                            id="vulnerable-data"
+                            name="serializedData"
+                            placeholder="在这里粘贴Base64编码的序列化数据..."></textarea>
+                    </div>
+
+                    <div class="preset-buttons">
+                        <button type="button" class="preset-btn" onclick="useSampleData('vulnerable')">
+                            📋 使用示例数据
+                        </button>
+                        <button type="button" class="preset-btn" onclick="showAttackExample()">
+                            🚨 查看攻击示例
+                        </button>
+                        <button type="button" class="preset-btn" onclick="demonstrateCommandExecution()"
+                                style="background: #ff6b6b; color: white; font-weight: bold;">
+                            💀 演示命令执行
+                        </button>
+                    </div>
+
+                    <button type="submit" class="submit-btn">反序列化（危险）</button>
+                </form>
+
+                <div class="result-area" id="vulnerableResult" style="display:none;">
+                    <div class="result-title">📊 反序列化结果</div>
+                    <div class="result-content" id="vulnerableResultContent"></div>
+                </div>
+
+                <div class="info-box">
+                    <h3>⚠️ 这个区域为什么危险？</h3>
+                    <ul>
+                        <li><strong>直接反序列化任意对象</strong>，没有类白名单限制</li>
+                        <li><strong>命令执行攻击</strong>：攻击者可以构造包含Runtime.exec()的恶意对象</li>
+                        <li><strong>Gadget链利用</strong>：利用Commons Collections等库执行任意代码</li>
+                        <li><strong>远程代码执行（RCE）</strong>：完全控制服务器</li>
+                        <li>可能导致数据泄露、权限提升、系统破坏等严重后果</li>
+                    </ul>
+                    <div class="code-example">
+// 危险代码示例
+ObjectInputStream ois = new ObjectInputStream(inputStream);
+Object obj = ois.readObject(); // 反序列化任意对象！
+
+// 攻击者构造的恶意类可能在readObject()中执行：
+private void readObject(ObjectInputStream ois) {
+    Runtime.getRuntime().exec("rm -rf /"); // 执行危险命令！
+}
+                    </div>
+                </div>
+            </div>
+
+            <!-- 安全区域 -->
+            <div class="section safe">
+                <div class="section-header">
+                    <div class="section-icon">✅</div>
+                    <div class="section-title">安全区域（已防护）</div>
+                </div>
+
+                <form id="safeForm" onsubmit="return submitSafe(event)">
+                    <div class="input-group">
+                        <label for="safe-data">Base64编码的序列化数据：</label>
+                        <textarea
+                            id="safe-data"
+                            name="serializedData"
+                            placeholder="在这里粘贴Base64编码的序列化数据..."></textarea>
+                    </div>
+
+                    <div class="preset-buttons">
+                        <button type="button" class="preset-btn" onclick="useSampleData('safe')">
+                            📋 使用示例数据
+                        </button>
+                        <button type="button" class="preset-btn" onclick="tryMaliciousData()">
+                            🛡️ 测试恶意数据（演示防护）
+                        </button>
+                    </div>
+
+                    <button type="submit" class="submit-btn">反序列化（安全）</button>
+                </form>
+
+                <div class="result-area" id="safeResult" style="display:none;">
+                    <div class="result-title">📊 反序列化结果</div>
+                    <div class="result-content" id="safeResultContent"></div>
+                </div>
+
+                <div class="info-box">
+                    <h3>✅ 这个区域如何防护？</h3>
+                    <ul>
+                        <li>使用白名单机制，只允许可信的类反序列化</li>
+                        <li>继承ObjectInputStream并重写resolveClass方法</li>
+                        <li>验证数据长度，防止大数据攻击</li>
+                        <li>优先使用JSON替代Java原生序列化</li>
+                    </ul>
+                    <div class="code-example">
+// 安全代码示例
+class WhiteListObjectInputStream extends ObjectInputStream {
+    protected Class&lt;?&gt; resolveClass(ObjectStreamClass desc) {
+        // 检查类是否在白名单中
+        if (!isAllowed(desc.getName())) {
+            throw new IllegalArgumentException("不允许的类");
+        }
+        return super.resolveClass(desc);
+    }
+}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div style="background: white; border-radius: 15px; padding: 25px; margin-top: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
+            <h2 style="color: #667eea; margin-bottom: 20px;">📚 什么是不安全的反序列化？</h2>
+
+            <div style="margin-bottom: 20px;">
+                <h3 style="color: #495057; margin-bottom: 10px;">🔍 漏洞原理</h3>
+                <p style="line-height: 1.8; color: #6c757d;">
+                    Java反序列化是将字节流转换回对象的过程。当应用程序反序列化来自不可信来源的数据时，
+                    如果没有进行适当的验证，攻击者可以构造包含恶意代码的序列化对象。当这些对象被反序列化时，
+                    可能会触发危险的操作，如执行系统命令、读取敏感文件等。
+                </p>
+            </div>
+
+            <div style="margin-bottom: 20px;">
+                <h3 style="color: #495057; margin-bottom: 10px;">💥 攻击场景</h3>
+                <ul style="margin-left: 20px; line-height: 2; color: #6c757d;">
+                    <li><strong>远程代码执行（RCE）</strong>：利用Runtime.exec()执行任意系统命令</li>
+                    <li><strong>Gadget链攻击</strong>：利用第三方库中的危险方法组合（如Commons Collections）</li>
+                    <li><strong>权限提升</strong>：反序列化特权对象，绕过访问控制</li>
+                    <li><strong>数据篡改</strong>：修改序列化对象中的敏感字段（如用户角色、权限）</li>
+                    <li><strong>拒绝服务</strong>：构造深度嵌套的对象消耗内存和CPU</li>
+                </ul>
+            </div>
+
+            <div style="margin-bottom: 20px;">
+                <h3 style="color: #495057; margin-bottom: 10px;">🛡️ 防护措施</h3>
+                <ol style="margin-left: 20px; line-height: 2; color: #6c757d;">
+                    <li><strong>避免使用原生序列化</strong>：优先使用JSON（Jackson/Gson）或Protocol Buffers</li>
+                    <li><strong>实施白名单</strong>：只允许特定的、可信的类进行反序列化</li>
+                    <li><strong>数据签名</strong>：使用HMAC或数字签名验证数据来源和完整性</li>
+                    <li><strong>输入验证</strong>：对序列化数据进行长度和格式验证</li>
+                    <li><strong>最小权限原则</strong>：使用SecurityManager限制反序列化的权限</li>
+                    <li><strong>保持更新</strong>：及时更新依赖库，修复已知的Gadget链漏洞</li>
+                    <li><strong>网络隔离</strong>：不要从不可信的网络接收序列化数据</li>
+                </ol>
+            </div>
+
+            <div>
+                <h3 style="color: #495057; margin-bottom: 10px;">📖 真实案例</h3>
+                <ul style="margin-left: 20px; line-height: 2; color: #6c757d;">
+                    <li><strong>Apache Commons Collections漏洞</strong>（2015年）：影响无数Java应用，可执行任意代码</li>
+                    <li><strong>WebLogic反序列化漏洞</strong>（CVE-2017-10271）：导致大量服务器被入侵</li>
+                    <li><strong>JBoss漏洞</strong>（CVE-2017-7504）：允许远程代码执行</li>
+                    <li><strong>Jenkins漏洞</strong>（CVE-2017-1000353）：未经认证的远程代码执行</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let sampleData = '';
+
+        // 生成示例数据
+        function generateSample() {
+            fetch('/deserialize/generate-sample')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        sampleData = data.base64Data;
+                        alert('✅ 示例数据生成成功！\n\n' + data.description + '\n\n' + data.userDetails + '\n\n数据已准备好，可以在下方区域使用。');
+                    } else {
+                        alert('❌ 生成失败: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    alert('❌ 请求失败: ' + error);
+                });
+        }
+
+        // 使用示例数据
+        function useSampleData(area) {
+            if (!sampleData) {
+                alert('⚠️ 请先生成示例数据！点击上方的"生成示例序列化数据"按钮。');
+                return;
+            }
+            document.getElementById(area + '-data').value = sampleData;
+        }
+
+        // 提交危险表单
+        function submitVulnerable(event) {
+            event.preventDefault();
+            const formData = new FormData(document.getElementById('vulnerableForm'));
+
+            fetch('/deserialize/vulnerable', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                const resultDiv = document.getElementById('vulnerableResult');
+                const resultContent = document.getElementById('vulnerableResultContent');
+
+                resultDiv.style.display = 'block';
+                resultContent.textContent = JSON.stringify(data, null, 2);
+
+                if (data.success) {
+                    let warningMsg = '⚠️ 反序列化成功！这是非常危险的操作！\n\n' +
+                                    '对象类型: ' + data.objectType + '\n' +
+                                    '对象内容: ' + data.objectToString;
+
+                    // 如果有命令执行输出，特别提示
+                    if (data.commandOutput) {
+                        warningMsg += '\n\n🔴 检测到命令执行！\n' +
+                                     '执行命令: ' + data.executedCommand + '\n' +
+                                     '输出结果:\n' + data.commandOutput + '\n\n' +
+                                     '在真实攻击中，这可能是：\n' +
+                                     '- 删除文件的命令 (rm -rf /)\n' +
+                                     '- 反弹Shell的命令\n' +
+                                     '- 下载恶意软件的命令\n' +
+                                     '- 窃取敏感数据的命令';
+                    }
+
+                    alert(warningMsg);
+                } else {
+                    alert('❌ 反序列化失败: ' + data.message);
+                }
+            })
+            .catch(error => {
+                alert('❌ 请求失败: ' + error);
+            });
+
+            return false;
+        }
+
+        // 提交安全表单
+        function submitSafe(event) {
+            event.preventDefault();
+            const formData = new FormData(document.getElementById('safeForm'));
+
+            fetch('/deserialize/safe', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                const resultDiv = document.getElementById('safeResult');
+                const resultContent = document.getElementById('safeResultContent');
+
+                resultDiv.style.display = 'block';
+                resultContent.textContent = JSON.stringify(data, null, 2);
+
+                if (data.success) {
+                    alert('✅ 安全反序列化成功！\n\n对象类型: ' + data.objectType + '\n对象内容: ' + data.objectToString);
+                } else {
+                    alert('❌ 反序列化失败: ' + data.message);
+                }
+            })
+            .catch(error => {
+                alert('❌ 请求失败: ' + error);
+            });
+
+            return false;
+        }
+
+        // 显示攻击示例
+        function showAttackExample() {
+            alert('🚨 攻击示例说明：\n\n' +
+                  '在实际攻击中，攻击者会构造包含恶意代码的序列化对象。\n\n' +
+                  '例如：\n' +
+                  '1. 利用Runtime.exec()执行系统命令\n' +
+                  '2. 利用Commons Collections Gadget链\n' +
+                  '3. 通过反射调用危险方法\n\n' +
+                  '⚠️ 注意：本演示不会展示真实的攻击payload，\n' +
+                  '以避免安全风险。在生产环境中，\n' +
+                  '永远不要反序列化来自不可信来源的数据！');
+        }
+
+        // 尝试恶意数据
+        function tryMaliciousData() {
+            alert('🛡️ 安全测试即将开始！\n\n' +
+                  '我将执行以下步骤：\n' +
+                  '1. 在前端构造一个恶意对象（不在白名单中的类）\n' +
+                  '2. 将其序列化为Base64数据\n' +
+                  '3. 提交到后台安全接口\n' +
+                  '4. 展示白名单机制如何拦截攻击\n\n' +
+                  '点击"确定"继续...');
+
+            // 由于JavaScript无法直接创建Java对象并序列化，
+            // 我们需要先调用后端接口生成一个恶意示例数据
+            fetch('/deserialize/generate-malicious-sample')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        console.log('✅ 获取到恶意序列化数据:', data);
+
+                        // 将恶意数据填入安全区域的表单
+                        document.getElementById('safe-data').value = data.base64Data;
+
+                        // 显示提示信息
+                        alert('📦 已生成恶意序列化数据！\n\n' +
+                              '对象类型: com.malicious.MaliciousPayload\n' +
+                              '攻击载荷: ' + data.payloadDetails + '\n\n' +
+                              '现在自动提交到安全接口进行测试...');
+
+                        // 延迟一下再提交，让用户看到数据已填充
+                        setTimeout(() => {
+                            submitSafe(new Event('submit'));
+                        }, 500);
+
+                    } else {
+                        alert('❌ 生成恶意数据失败: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    alert('❌ 请求失败: ' + error + '\n\n请确保后台服务正在运行！');
+                    console.error('Error:', error);
+                });
+        }
+
+        // 演示命令执行攻击
+        function demonstrateCommandExecution() {
+            alert('🚨 命令执行漏洞演示！\n\n' +
+                  '这个演示将展示：\n' +
+                  '1. 生成一个包含命令执行能力的恶意对象\n' +
+                  '2. 提交到危险区域（无防护）\n' +
+                  '3. 观察命令如何被执行\n' +
+                  '4. 对比安全区域的防护效果\n\n' +
+                  '⚠️ 注意：为了安全，命令不会真正执行，\n' +
+                  '只会展示攻击原理。\n\n' +
+                  '点击"确定"开始演示...');
+
+            // 生成命令执行的恶意样本
+            fetch('/deserialize/generate-command-execution-sample')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        console.log('✅ 获取到命令执行样本:', data);
+
+                        // 填充到危险区域
+                        document.getElementById('vulnerable-data').value = data.base64Data;
+
+                        alert('📦 已生成命令执行恶意对象！\n\n' +
+                              '包含命令: ' + data.command + '\n\n' +
+                              '现在提交到【危险区域】查看效果...');
+
+                        // 自动提交到危险区域
+                        setTimeout(() => {
+                            submitVulnerable(new Event('submit'));
+                        }, 500);
+
+                    } else {
+                        alert('❌ 生成样本失败: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    alert('❌ 请求失败: ' + error);
+                    console.error('Error:', error);
+                });
+        }
+
+        // 模拟恶意数据测试（当后端接口不可用时）
+        function simulateMaliciousTest() {
+            const resultDiv = document.getElementById('safeResult');
+            const resultContent = document.getElementById('safeResultContent');
+
+            resultDiv.style.display = 'block';
+
+            const mockResponse = {
+                success: false,
+                message: '非法类被阻止: 不允许反序列化的类: com.malicious.MaliciousPayload',
+                security: '✅ 白名单机制成功拦截了恶意对象！'
+            };
+
+            resultContent.textContent = JSON.stringify(mockResponse, null, 2);
+
+            // 显示详细的安全说明
+            setTimeout(() => {
+                alert('🛡️ 攻击被成功阻止！\n\n' +
+                      '❌ 错误信息：不允许反序列化的类: com.malicious.MaliciousPayload\n\n' +
+                      '✅ 防护原理：\n' +
+                      '1. WhiteListObjectInputStream重写了resolveClass方法\n' +
+                      '2. 检查每个要反序列化的类是否在白名单中\n' +
+                      '3. 只有User、String、Integer等可信类被允许\n' +
+                      '4. 其他所有类都会抛出IllegalArgumentException\n\n' +
+                      '💡 这就是为什么即使攻击者发送恶意序列化数据，\n' +
+                      '   安全的应用程序也能有效防御的原因！');
+            }, 100);
+        }
+
+        // 显示安全防护的详细解释
+        function showSecurityExplanation(data) {
+            alert('🛡️ 攻击被成功阻止！\n\n' +
+                  '❌ 错误信息：' + data.message + '\n\n' +
+                  '✅ 防护机制详解：\n\n' +
+                  '【白名单验证流程】\n' +
+                  '1. 接收Base64编码的序列化数据\n' +
+                  '2. 解码为字节数组\n' +
+                  '3. 使用WhiteListObjectInputStream读取\n' +
+                  '4. resolveClass()方法被调用时：\n' +
+                  '   - 获取要反序列化的类名\n' +
+                  '   - 与ALLOWED_CLASSES数组比对\n' +
+                  '   - 不在白名单中 → 抛出异常\n\n' +
+                  '【允许的类列表】\n' +
+                  '✓ org.example.security...User\n' +
+                  '✓ java.lang.String\n' +
+                  '✓ java.lang.Integer/Long/Double/Boolean\n' +
+                  '✓ String数组\n\n' +
+                  '【被阻止的攻击类型】\n' +
+                  '✗ Commons Collections Gadget链\n' +
+                  '✗ Runtime.exec()远程代码执行\n' +
+                  '✗ 反射调用危险方法\n' +
+                  '✗ 任意类实例化\n\n' +
+                  '💡 记住：永远不要信任外部输入的序列化数据！');
+        }
+
+        // 自动滚动到结果区域
+        window.addEventListener('load', function() {
+            // 页面加载完成
+        });
+    </script>
+</body>
+</html>
