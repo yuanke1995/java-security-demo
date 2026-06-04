@@ -353,10 +353,10 @@
                         <button type="button" class="preset-btn" onclick="setPreset('vulnerable', '1 OR 1=1')">
                             🚨 基础注入
                         </button>
-                        <button type="button" class="preset-btn" onclick="setPreset('vulnerable', '1 UNION SELECT null,username,password FROM users--')">
+                        <button type="button" class="preset-btn" onclick="setPreset('vulnerable', '1 UNION SELECT id,username FROM user')">
                             🔍 联合查询
                         </button>
-                        <button type="button" class="preset-btn" onclick="setPreset('vulnerable', '1; DROP TABLE users--')">
+                        <button type="button" class="preset-btn" onclick="setPreset('vulnerable', '1; DROP TABLE user')">
                             💥 破坏性注入
                         </button>
                     </div>
@@ -410,10 +410,10 @@
                         <button type="button" class="preset-btn" onclick="setPreset('safe', '1 OR 1=1')">
                             🚨 基础注入
                         </button>
-                        <button type="button" class="preset-btn" onclick="setPreset('safe', '1 UNION SELECT null,username,password FROM users--')">
+                        <button type="button" class="preset-btn" onclick="setPreset('safe', '1 UNION SELECT id,username FROM user')">
                             🔍 联合查询
                         </button>
-                        <button type="button" class="preset-btn" onclick="setPreset('safe', '1; DROP TABLE users--')">
+                        <button type="button" class="preset-btn" onclick="setPreset('safe', '1; DROP TABLE user')">
                             💥 破坏性注入
                         </button>
                     </div>
@@ -472,7 +472,7 @@
 
                 <div style="margin-bottom: 15px;">
                     <strong>2. 联合查询注入：</strong>
-                    <code style="background: #f8f9fa; padding: 2px 6px; border-radius: 3px;">1 UNION SELECT username, password FROM users</code>
+                    <code style="background: #f8f9fa; padding: 2px 6px; border-radius: 3px;">1 UNION SELECT id,username, password FROM user</code>
                 </div>
 
                 <div style="margin-bottom: 15px;">
@@ -482,7 +482,7 @@
 
                 <div style="margin-bottom: 15px;">
                     <strong>4. 堆叠查询：</strong>
-                    <code style="background: #f8f9fa; padding: 2px 6px; border-radius: 3px;">1; DROP TABLE users--</code>
+                    <code style="background: #f8f9fa; padding: 2px 6px; border-radius: 3px;">1; DROP TABLE user--</code>
                 </div>
 
                 <button onclick="simulateAttack()" class="submit-btn" style="margin-top: 15px; background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%); border: 2px solid #ffc107;">

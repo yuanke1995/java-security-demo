@@ -66,14 +66,14 @@ public class SecurityCsrfController {
     @PostMapping("/security/transfer/safe")
     @ResponseBody
     public String safeTransfer(
-            @RequestParam String toAccount, 
+            @RequestParam String toAccount,
             @RequestParam String amount,
             HttpServletRequest request) {
         
         System.out.println("\n=== ✅ Spring Security - 安全接口（自动CSRF验证）===");
         System.out.println("✅ Spring Security已自动验证CSRF Token");
         System.out.println("IP: " + request.getRemoteAddr());
-        
+
         try {
             double transferAmount = Double.parseDouble(amount);
             if (transferAmount > balance) {
@@ -156,11 +156,26 @@ public class SecurityCsrfController {
     }
 
     /**
+     * 恶意网站演示页面
+     * 这个页面模拟攻击者创建的钓鱼网站
+     * 用于演示真实的 CSRF 攻击场景
+     */
+    @GetMapping("/malicious-site")
+    public String maliciousSitePage() {
+        return "malicious-site";
+    }
+
+    /**
      * 获取账户信息（GET请求，不需要CSRF Token）
      */
     @GetMapping("/security/api/balance")
     @ResponseBody
     public String getBalance() {
         return "{\"balance\":\"" + String.format("%.2f", balance) + "\"}";
+    }
+
+    @GetMapping("/updatePassword")
+    public String updatePassword(Model model) {
+        return "updatePassword";
     }
 }
